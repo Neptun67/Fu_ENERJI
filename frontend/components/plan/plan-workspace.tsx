@@ -179,9 +179,14 @@ export function PlanWorkspace({
 
               <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="mb-1 text-sm font-semibold text-sea-900">Berthing plan</h2>
-                <p className="mb-4 text-xs text-slate-500">
-                  Each row is a berth. Bars are assignments; the grey tail after a bar is the
-                  manoeuvring buffer.
+                <p className="mb-4 max-w-3xl text-xs leading-relaxed text-slate-600">
+                  Each row is a berth, time runs left to right. A ship first{" "}
+                  <span className="font-medium text-amber-800">waits at anchor</span> from its
+                  ETA until a berth frees up, then sits{" "}
+                  <span className="font-medium text-sea-800">at the berth</span> for its
+                  handling time, and finally the berth stays blocked for the{" "}
+                  <span className="font-medium text-slate-700">manoeuvring buffer</span> before
+                  the next ship can come alongside.
                 </p>
                 <GanttChart plan={selected} berths={berths} shipsById={shipsById} />
               </section>

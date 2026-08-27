@@ -177,7 +177,8 @@ export function GanttChart({
 
       <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 px-1 text-xs text-slate-600">
         <span className="flex items-center gap-1.5">
-          <span aria-hidden="true" className="h-3 w-3 rounded bg-sea-600" /> At berth
+          <span aria-hidden="true" className="h-3 w-3 shrink-0 rounded bg-sea-600" /> At berth
+          <span className="text-slate-500">(handling)</span>
         </span>
         <span className="flex items-center gap-1.5">
           <span
@@ -188,10 +189,11 @@ export function GanttChart({
                 "repeating-linear-gradient(45deg, rgba(217,119,6,0.16) 0 4px, transparent 4px 8px)",
             }}
           />
-          Waiting
+          Waiting <span className="text-slate-500">(at anchor, since ETA)</span>
         </span>
         <span className="flex items-center gap-1.5">
-          <span aria-hidden="true" className="h-3 w-3 rounded bg-slate-200" /> Manoeuvring buffer
+          <span aria-hidden="true" className="h-3 w-3 shrink-0 rounded bg-slate-200" /> Manoeuvring buffer
+          <span className="text-slate-500">(berth blocked)</span>
         </span>
         <span className="ml-auto tabular-nums">Times in UTC</span>
       </div>
