@@ -15,8 +15,15 @@ Kurulum: **Backend + PostgreSQL → Railway**, **Frontend → Vercel**.
 1. [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo** → repoyu seç.
 2. Servisin **Settings → Root Directory** alanını `backend` yap. (Railway, `backend/Dockerfile`'ı
    otomatik algılar; Dockerfile başlatmadan önce `alembic upgrade head` çalıştırır.)
-3. Projeye **New → Database → PostgreSQL** ekle. Bu, backend servisine otomatik olarak bir
-   `DATABASE_URL` ortam değişkeni enjekte eder.
+3. Projeye **New → Database → PostgreSQL** ekle. Ardından backend servisi →
+   **Variables → New Variable** ile bağlantıyı **elle** kur:
+   - Name: `DATABASE_URL`, Value: `${{Postgres.DATABASE_URL}}`
+   - Elle yazmak yerine **Add a Reference** düğmesinden `Postgres` → `DATABASE_URL` seç.
+   - `DATABASE_PUBLIC_URL` değil, özel ağdan giden `DATABASE_URL` kullanılır.
+
+   > Railway Postgres'i aynı projeye eklemek değişkeni backend servisine **otomatik
+   > enjekte etmez**. Bu adım atlanırsa uygulama `config.py`'deki lokal varsayılana düşer
+   > ve açılışta `connection to server at "127.0.0.1", port 5432 failed` ile çöker.
    - Bu URL `postgres://...` biçimindedir; uygulama bunu psycopg v3 sürücüsüne **otomatik**
      çevirir (kod tarafında hallettik).
 4. Backend servisi → **Settings → Networking → Generate Domain**. Bir public URL alırsın:
@@ -56,7 +63,7 @@ Bu, 6 rıhtım ve 11 gemi ekler; plan üretince 8 atama + 3 atanamayan (üç far
 - **Ortam değişkenleri özeti:**
   | Nerede | Değişken | Örnek |
   |---|---|---|
-  | Railway (backend) | `DATABASE_URL` | *(Postgres eklentisi otomatik)* |
+  | Railway (backend) | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` *(referans olarak elle eklenir)* |
   | Railway (backend) | `CORS_ORIGINS` | `https://uygulama.vercel.app` |
   | Vercel (frontend) | `NEXT_PUBLIC_API_URL` | `https://backend.up.railway.app/api` |
 - **Alternatif (Render):** Backend için Render de kullanılabilir — aynı Dockerfile geçerli;
