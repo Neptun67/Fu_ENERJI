@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta, timezone
 
 from app.domain.planner import plan
-from app.domain.types import BerthInput, ShipInput, UnassignedReason
+from app.domain.types import BerthInput, ShipInput, UnassignedReason, waiting_minutes
 
 T0 = datetime(2026, 8, 26, 8, 0, tzinfo=timezone.utc)
 
@@ -95,3 +95,10 @@ def test_no_berths_all_unassigned():
     res = plan([ship(1), ship(2)], [], buffer_min=60)
     assert len(res.unassigned) == 2
     assert all(u.reason == UnassignedReason.NO_SUITABLE_BERTH for u in res.unassigned)
+
+
+def test_waiting_minutes_is_clamped_at_zero():
+    # Kural tek kaynakta (waiting_minutes); başlangıç ETA'dan önceyse bekleme negatif olmaz.
+    assert waiting_minutes(T0 + timedelta(minutes=90), T0) == 90
+    assert waiting_minutes(T0, T0) == 0
+    assert waiting_minutes(T0 - timedelta(minutes=30), T0) == 0

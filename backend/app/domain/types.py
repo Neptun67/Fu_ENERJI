@@ -41,18 +41,26 @@ class BerthInput:
     depth_m: float
 
 
+def waiting_minutes(start_time: datetime, eta: datetime) -> int:
+    """Bekleme (dk) = başlangıç - ETA. Negatifse 0'a kırpılır.
+
+    Bu kuralın TEK kaynağı burasıdır; ORM modeli de bunu çağırır, böylece
+    aynı iş kuralı altyapı katmanında yeniden yazılmaz.
+    """
+    return max(0, int((start_time - eta).total_seconds() // 60))
+
+
 @dataclass(frozen=True)
 class PlannedAssignment:
     ship_id: int
     berth_id: int
-    eta: datetime          # bekleme hesabı için taşınır (DB'ye yazılmaz)
+    eta: datetime          # planın üretildiği andaki ETA; atamayla birlikte saklanır
     start_time: datetime
     end_time: datetime
 
     @property
     def waiting_min(self) -> int:
-        """Bekleme (dk) = başlangıç - ETA. Negatifse 0'a kırpılır."""
-        return max(0, int((self.start_time - self.eta).total_seconds() // 60))
+        return waiting_minutes(self.start_time, self.eta)
 
 
 @dataclass(frozen=True)

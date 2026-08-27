@@ -45,7 +45,7 @@ class SchedulingService:
         plan_row = Plan(buffer_min=buffer, total_waiting_min=result.total_waiting_min)
         plan_row.assignments = [
             Assignment(
-                ship_id=a.ship_id, berth_id=a.berth_id,
+                ship_id=a.ship_id, berth_id=a.berth_id, eta=a.eta,
                 start_time=a.start_time, end_time=a.end_time,
             )
             for a in result.assignments

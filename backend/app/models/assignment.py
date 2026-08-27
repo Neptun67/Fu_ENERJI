@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import DateTime, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.domain.types import waiting_minutes
 from app.models.base import Base
 
 if TYPE_CHECKING:
@@ -27,6 +28,9 @@ class Assignment(Base):
     # silinemez; böylece geçmiş planların bütünlüğü korunur.
     ship_id: Mapped[int] = mapped_column(ForeignKey("ships.id"), nullable=False)
     berth_id: Mapped[int] = mapped_column(ForeignKey("berths.id"), nullable=False)
+    # Planın üretildiği andaki ETA'nın kopyası. Bilinçli denormalizasyon: plan bir
+    # ANLIK GÖRÜNTÜdür; gemi sonradan düzenlense de geçmiş planın beklemesi değişmemeli.
+    eta: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
@@ -36,6 +40,6 @@ class Assignment(Base):
 
     @property
     def waiting_min(self) -> int:
-        """Bekleme süresi (dk) = start_time - ETA. (ship ilişkisi yüklü olmalı.)"""
-        delta = self.start_time - self.ship.eta
-        return max(0, int(delta.total_seconds() // 60))
+        """Bekleme süresi (dk). Kural domain'de tanımlıdır; burada yeniden yazılmaz.
+        Canlı gemi kaydı değil, atamayla saklanan ETA kopyası kullanılır."""
+        return waiting_minutes(self.start_time, self.eta)

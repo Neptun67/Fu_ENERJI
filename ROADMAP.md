@@ -196,6 +196,19 @@ Geliştirme sırasında plandan sapıldıkça buraya işlenecek. Format:
   başlatmadan önce `alembic upgrade head` çalıştırıyor. — **Neden:** Railway gibi platformlar
   DB URL'ini `postgres://` biçiminde verir ve env'i platformdan alırız; deploy'un elle
   müdahale gerektirmeden çalışması için.
+- `2026-08-27` — **Ne değişti:** `Assignment`'a `eta` sütunu eklendi; atamanın beklemesi
+  artık canlı `Ship.eta` yerine planla birlikte saklanan bu kopyadan hesaplanıyor. Bekleme
+  kuralı (`bekleme = başlangıç − ETA`) tek kaynağa indirildi: `domain/types.waiting_minutes`;
+  ORM modeli kuralı yeniden yazmak yerine bu fonksiyonu çağırıyor. — **Neden:** Teslim öncesi
+  yaptığım kod denetiminde, kuralın hem saf domain'de hem `models/assignment.py` içinde ayrı
+  ayrı yazıldığını ve ORM'deki sürümün canlı gemi kaydını okuduğunu fark ettim. Sonuç olarak
+  bir plan üretildikten sonra geminin ETA'sı düzenlenirse, kayıtlı `Plan.total_waiting_min`
+  ile satır bazlı beklemeler çelişiyordu. `Plan` zaten "üretildiği andaki kayıt" olarak
+  tasarlandığı ve `buffer_min` aynı mantıkla kopyalandığı için, ETA'yı kopyalamamak bu
+  tasarımla çelişiyordu. Denormalizasyonu bilinçli olarak kabul ettim: bu ölçekte maliyeti
+  yok, karşılığında geçmiş planlar gerçekten değişmez oluyor. Mevcut satırlar migration
+  içinde gemilerin ETA'sından geri dolduruldu.
+
 - `2026-08-26` — **Ne değişti:** `UnassignedReason` enum'u `app/models` yerine saf
   `app/domain/types` içine taşındı. — **Neden:** Planlayıcı çekirdeğinin altyapıdan
   (SQLAlchemy) bağımsız kalması için; model artık enum'u domain'den import ediyor (tek kaynak).
