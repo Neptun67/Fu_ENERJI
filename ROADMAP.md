@@ -196,6 +196,40 @@ Geliştirme sırasında plandan sapıldıkça buraya işlenecek. Format:
   başlatmadan önce `alembic upgrade head` çalıştırıyor. — **Neden:** Railway gibi platformlar
   DB URL'ini `postgres://` biçiminde verir ve env'i platformdan alırız; deploy'un elle
   müdahale gerektirmeden çalışması için.
+- `2026-08-27` — **Ne değişti:** Planlayıcının öncelik kuralı FCFS'ten (varış sırası)
+  **HRRN**'e (Highest Response Ratio Next) çevrildi; `plan()` "sırala + yerleştir"
+  döngüsünden her adımda karar veren bir **dispatch** döngüsüne dönüştü. — **Neden:**
+  ROADMAP'te sıralama kararı gerekçelendirilmemişti; teslim öncesi bunu ölçmeye karar
+  verdim. Her yapılandırma için 20 rastgele veri seti üretip karşılaştırdım
+  (yük = elleçleme talebi / (rıhtım × varış penceresi)):
+
+  | Kural | Toplam bekleme kazancı | En kötü bekleme bedeli | Parametre |
+  |---|---:|---:|---|
+  | SPT (aging yok) | +16.5% | +9 … +70% | yok |
+  | Aging α=0.25 | +12% | +0.6 … +1.4% | α |
+  | Aging α=0.5 | +7–8% | −1.4 … −1.9% | α |
+  | **HRRN** | **+12–14%** | **+2.6 … +9.5%** | **yok** |
+
+  Bulgular: (1) düşük yükte (ör. 6 rıhtım / 8 gemi — seed verimizin bulunduğu nokta)
+  kurallar arasında ölçülebilir fark yok; (2) düz SPT toplam beklemeyi azaltıyor ama uzun
+  gemileri açlığa itiyor; (3) aging bu bedeli büyük ölçüde kaldırıyor. HRRN'i seçtim çünkü
+  aging'in faydasını **ayarlanacak bir sabit olmadan** veriyor: α'nın adaleti koruyan
+  değeri yük rejimine göre 0.25–0.5 arasında kayıyor ve α'nın fiziksel bir karşılığı yok;
+  elimizde gerekçelendirilmesi gereken bir sabit (60 dk tampon) zaten var, ikincisini
+  eklemek istemedim. HRRN oranı geminin kendi elleçleme süresine göre normalize ettiği
+  için kendini yüke uyarlıyor.
+
+  **Bilinen sınır:** HRRN açlığı sınırlar, tamamen kaldırmaz — aynı süre beklemiş kısa
+  gemiler oranı daha hızlı büyüttüğü için uzun gemiden önce hizmet alabilir. Ölçümdeki
+  +2.6…+9.5% en kötü bekleme bedeli bunun karşılığı. `test_hrrn_rescues_a_long_ship_from_starvation`
+  bu davranışı sabitliyor (aynı test düz SPT ile başarısız oluyor).
+
+  **Maliyet:** değişiklik `domain/planner.py` dışına taşmadı (+47/−18 satır); servis, şema,
+  API ve frontend'e dokunulmadı. Mevcut 12 testin hiçbiri kırılmadı; yalnızca
+  `test_greedy_orders_by_eta` adı yanıltıcı hâle geldiği için
+  `test_ship_cannot_start_before_its_eta` olarak yeniden adlandırıldı. Saf domain
+  katmanı kararının somut getirisi bu.
+
 - `2026-08-27` — **Ne değişti:** `Assignment`'a `eta` sütunu eklendi; atamanın beklemesi
   artık canlı `Ship.eta` yerine planla birlikte saklanan bu kopyadan hesaplanıyor. Bekleme
   kuralı (`bekleme = başlangıç − ETA`) tek kaynağa indirildi: `domain/types.waiting_minutes`;

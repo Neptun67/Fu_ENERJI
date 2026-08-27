@@ -66,13 +66,41 @@ def test_two_ships_two_berths_run_in_parallel():
     assert res.total_waiting_min == 0
 
 
-def test_greedy_orders_by_eta():
-    early = ship(1, eta=T0 + timedelta(hours=1))     # 09:00
-    earlier = ship(2, eta=T0)                        # 08:00
-    res = plan([early, earlier], [berth(1)], buffer_min=60)
+def test_ship_cannot_start_before_its_eta():
+    # Henüz varmamış gemi, rıhtım boş olsa bile öne alınamaz (4. kural).
+    late = ship(1, eta=T0 + timedelta(hours=1))       # 09:00
+    early = ship(2, eta=T0)                           # 08:00
+    res = plan([late, early], [berth(1)], buffer_min=60)
     by_time = sorted(res.assignments, key=lambda a: a.start_time)
-    assert by_time[0].ship_id == 2                   # erken varan önce yanaşır
+    assert by_time[0].ship_id == 2                    # yalnızca varmış olan başlayabilir
     assert by_time[1].ship_id == 1
+    assert all(a.start_time >= a.eta for a in res.assignments)
+
+
+def test_hrrn_rescues_a_long_ship_from_starvation():
+    """HRRN'in varlık nedeni: sürekli kısa gemi akışı altında uzun gemi sona itilmez.
+
+    Kurgu: uzun gemi (600 dk) T0'da varır ama EN YÜKSEK id'ye sahiptir, yani ilk
+    karar anındaki eşitliği kaybeder. Ardından her 90 dk'da bir kısa gemi (60 dk)
+    gelir. Düz SPT her adımda taze kısa gemiyi seçip uzun gemiyi en sona atardı.
+    HRRN'de uzun geminin bekleme/elleçleme oranı büyüdüğü için bir sonraki karar
+    anında önceliği taze gemilerinkini aşar ve kurtarılır.
+
+    Not: HRRN açlığı sınırlar, tamamen ortadan kaldırmaz — aynı anda beklemiş
+    kısa gemiler oranı daha hızlı büyüttüğü için hâlâ öne geçebilir.
+    """
+    UZUN = 99
+    kisalar = [ship(i, eta=T0 + timedelta(minutes=90 * (i - 1)), handling=60)
+               for i in range(1, 8)]
+    uzun = ship(UZUN, eta=T0, handling=600)
+    res = plan([*kisalar, uzun], [berth(1)], buffer_min=30)
+
+    sirali = [a.ship_id for a in sorted(res.assignments, key=lambda a: a.start_time)]
+    uzun_bekleme = next(a.waiting_min for a in res.assignments if a.ship_id == UZUN)
+
+    assert sirali[-1] != UZUN, f"uzun gemi sona itildi: {sirali}"
+    # Düz SPT bu kurguda 630 dk bekletiyor; HRRN belirgin biçimde altında kalmalı.
+    assert uzun_bekleme < 300, f"uzun gemi açlığa düştü: {uzun_bekleme} dk"
 
 
 def test_total_waiting_is_sum():
