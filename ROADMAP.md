@@ -190,6 +190,18 @@ Departures from the plan are recorded here as they happen. Format:
 
 - `YYYY-MM-DD` — **What changed:** … — **Why:** …
 
+- `2026-08-27` — **What changed:** plans can be discarded, and ships and berths can now be
+  deleted even while plans reference them. Assignments and unassigned entries store the
+  ship and berth names as they were at plan time; the foreign keys became `SET NULL`
+  instead of `RESTRICT`; `Plan.stale_at` and `Plan.stale_reason` record that a plan no
+  longer matches current data. Outdated plans are shown in their own group in the UI. —
+  **Why:** `RESTRICT` meant the only way to remove a vessel was to re-seed the database,
+  which wipes everything. Dropping the constraint alone would have let a deletion quietly
+  strip rows out of a stored plan, which is the same class of defect the ETA snapshot
+  fixed. Storing the names instead keeps the plan readable after its inputs are gone, so
+  the record of what was decided outlives the data it was decided from — plans are neither
+  rewritten nor deleted when their inputs change, only marked.
+
 - `2026-08-27` — **What changed:** the seed script now offers two scenarios, selected with
   a flag: `python -m app.seed` loads a light day (11 ships) and `python -m app.seed --busy`
   a congested one (27 ships). Both share the same quay and the same three unassignable

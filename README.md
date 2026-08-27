@@ -205,10 +205,18 @@ Ship --+                    +-- Assignment --> Berth
 Berth -+                    +-- UnassignedEntry (+ reason)
 ```
 
-A `Plan` is a **snapshot**: it stores the buffer value used at generation time
-(`buffer_min`) and each assignment's ETA at that moment (`Assignment.eta`). Editing a ship
-later therefore cannot change a past plan's waiting times. Ships and berths referenced by
-a plan cannot be deleted (FK RESTRICT); attempting to do so returns 409.
+A `Plan` is a **snapshot**. It stores the buffer used at generation time (`buffer_min`),
+each assignment's ETA at that moment (`Assignment.eta`), and the ship and berth **names**
+as they read then. Editing a ship afterwards therefore cannot change a past plan's waiting
+times.
+
+Because the names are stored, a ship or berth can be **deleted even while plans reference
+it**. The foreign keys are `SET NULL` rather than `RESTRICT`: the assignment row survives
+with its names intact, and the plan is flagged with `stale_at` and `stale_reason`. Such
+plans are neither rewritten nor discarded — they appear under **Outdated** in the UI, still
+showing exactly what was decided, alongside a note saying which deletion made them stale.
+A plan can also be discarded outright; it is a leaf aggregate, so its rows go with it and
+nothing else is affected.
 
 ---
 
@@ -300,7 +308,8 @@ berth, was noticed. That added a third reason, `NO_SUITABLE_BERTH`.
 ### Constraints considered and not considered
 
 **Considered:** the five rules from the brief, plus the integrity of historical plans
-(records referenced by a plan cannot be deleted) and determinism of plan generation.
+(a plan keeps the data it was generated from, even after that data is deleted) and
+determinism of plan generation.
 
 **Deliberately out of scope:**
 
