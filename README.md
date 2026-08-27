@@ -212,10 +212,15 @@ times.
 
 Because the names are stored, a ship or berth can be **deleted even while plans reference
 it**. The foreign keys are `SET NULL` rather than `RESTRICT`: the assignment row survives
-with its names intact, and the plan is flagged with `stale_at` and `stale_reason`. Such
-plans are neither rewritten nor discarded — they appear under **Outdated** in the UI, still
-showing exactly what was decided, alongside a note saying which deletion made them stale.
-A plan can also be discarded outright; it is a leaf aggregate, so its rows go with it and
+with its names intact.
+
+A plan is marked **outdated** (`stale_at`, `stale_reason`) whenever the data it was built
+from moves on — a ship or berth being deleted, or edited in a way that affects planning.
+For a ship that means ETA, length, draft or handling time; for a berth, length or depth.
+Renaming does not count: yesterday's schedule is not wrong because a berth was relabelled.
+Outdated plans are neither rewritten nor discarded. They appear under **Outdated** in the
+UI, still showing exactly what was decided, with a note saying what changed and when. A
+plan can also be discarded outright; it is a leaf aggregate, so its rows go with it and
 nothing else is affected.
 
 ---

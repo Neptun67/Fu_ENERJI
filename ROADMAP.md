@@ -194,7 +194,9 @@ Departures from the plan are recorded here as they happen. Format:
   deleted even while plans reference them. Assignments and unassigned entries store the
   ship and berth names as they were at plan time; the foreign keys became `SET NULL`
   instead of `RESTRICT`; `Plan.stale_at` and `Plan.stale_reason` record that a plan no
-  longer matches current data. Outdated plans are shown in their own group in the UI. —
+  longer matches current data. A plan is also marked when a ship or berth is *edited* in a
+  way that affects planning - ETA, length, draft, handling time, depth - though not when it
+  is merely renamed. Outdated plans are shown in their own group in the UI. —
   **Why:** `RESTRICT` meant the only way to remove a vessel was to re-seed the database,
   which wipes everything. Dropping the constraint alone would have let a deletion quietly
   strip rows out of a stored plan, which is the same class of defect the ETA snapshot

@@ -6,6 +6,10 @@ from app.repositories.berth_repository import BerthRepository
 from app.repositories.plan_repository import PlanRepository
 from app.schemas.berth import BerthCreate, BerthUpdate
 
+# Editing one of these invalidates a plan that used this berth; editing anything
+# else (a name, say) does not. Length and depth are what the planner reads.
+PLANNING_FIELDS = ("length_m", "depth_m")
+
 
 class BerthService:
     """Berth business logic."""
@@ -32,12 +36,25 @@ class BerthService:
         return berth
 
     def update_berth(self, berth_id: int, payload: BerthUpdate) -> Berth:
-        berth = self.get_berth(berth_id)
-        for field, value in payload.model_dump(exclude_unset=True).items():
-            setattr(berth, field, value)
+        """Apply a partial update, flagging plans if the change affects planning.
+
+        A plan is a record of a moment, so it is not recalculated - but once the
+        berth it was built from has moved on, the plan no longer describes the
+        current quay and is marked stale so the reader knows.
+        """
+        obj = self.get_berth(berth_id)
+        changes = payload.model_dump(exclude_unset=True)
+        affects_planning = any(
+            field in changes and getattr(obj, field) != changes[field]
+            for field in PLANNING_FIELDS
+        )
+        for field, value in changes.items():
+            setattr(obj, field, value)
+        if affects_planning:
+            self.plans.mark_stale_for_berth(obj.id, f"Berth {obj.name!r} was edited")
         self.db.commit()
-        self.db.refresh(berth)
-        return berth
+        self.db.refresh(obj)
+        return obj
 
     def delete_berth(self, berth_id: int) -> None:
         """Delete a berth, flagging any plan that used it as stale.
@@ -48,6 +65,6 @@ class BerthService:
         was decided from.
         """
         obj = self.get_berth(berth_id)
-        self.plans.mark_stale_for_berth(obj.id, obj.name)
+        self.plans.mark_stale_for_berth(obj.id, f"Berth {obj.name!r} was deleted")
         self.repo.delete(obj)
         self.db.commit()

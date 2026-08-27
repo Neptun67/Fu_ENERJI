@@ -38,17 +38,17 @@ class PlanRepository(BaseRepository[Plan]):
             plan.stale_reason = reason
         return len(plans)
 
-    def mark_stale_for_ship(self, ship_id: int, ship_name: str) -> int:
+    def mark_stale_for_ship(self, ship_id: int, reason: str) -> int:
         return self._mark_stale(
             or_(
                 Plan.assignments.any(Assignment.ship_id == ship_id),
                 Plan.unassigned_entries.any(UnassignedEntry.ship_id == ship_id),
             ),
-            f"Ship {ship_name!r} was deleted",
+            reason,
         )
 
-    def mark_stale_for_berth(self, berth_id: int, berth_name: str) -> int:
+    def mark_stale_for_berth(self, berth_id: int, reason: str) -> int:
         return self._mark_stale(
             Plan.assignments.any(Assignment.berth_id == berth_id),
-            f"Berth {berth_name!r} was deleted",
+            reason,
         )
