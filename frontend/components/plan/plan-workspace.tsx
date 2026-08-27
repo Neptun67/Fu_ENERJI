@@ -182,7 +182,7 @@ export function PlanWorkspace({
                 <p className="mb-4 max-w-3xl text-xs leading-relaxed text-slate-600">
                   Each row is a berth, time runs left to right. A ship first{" "}
                   <span className="font-medium text-amber-800">waits at anchor</span> from its
-                  ETA until a berth frees up, then sits{" "}
+                  ETA (estimated time of arrival) until a berth frees up, then sits{" "}
                   <span className="font-medium text-sea-800">at the berth</span> for its
                   handling time, and finally the berth stays blocked for the{" "}
                   <span className="font-medium text-slate-700">manoeuvring buffer</span> before

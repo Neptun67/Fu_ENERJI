@@ -107,7 +107,7 @@ export function ShipManager({ initialShips }: { initialShips: Ship[] }) {
             type="datetime-local"
             value={form.eta}
             onChange={set("eta")}
-            hint="Times are UTC"
+            hint="Estimated time of arrival, in UTC"
             required
           />
           <Field

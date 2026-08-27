@@ -30,7 +30,7 @@ reducing total waiting time.
 1. Only one ship may occupy a berth at a time.
 2. Ship length ≤ berth length.
 3. Ship draft ≤ berth depth.
-4. A ship cannot be assigned before its arrival time (ETA).
+4. A ship cannot be assigned before its estimated time of arrival (ETA).
 5. Consecutive assignments on the same berth are separated by a **manoeuvring buffer**.
 
 **Optimisation objective:** `waiting = start_time − ETA`; the plan is produced so as to

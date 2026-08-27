@@ -45,7 +45,7 @@ Related documents: [ROADMAP.md](ROADMAP.md) (implementation plan and change log)
 1. Only one ship may occupy a berth at a time.
 2. Ship length must not exceed berth length.
 3. Ship draft must not exceed berth depth.
-4. A ship cannot be assigned before its ETA.
+4. A ship cannot be assigned before its ETA (estimated time of arrival).
 5. Consecutive assignments on the same berth are separated by a manoeuvring buffer
    (60 min by default; rationale [below](#assumptions)).
 
