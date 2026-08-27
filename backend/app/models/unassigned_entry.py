@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import ForeignKey, Integer
+from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 # The enum has a single source: the pure domain layer. Model and planner therefore
@@ -26,10 +26,13 @@ class UnassignedEntry(Base):
     plan_id: Mapped[int] = mapped_column(
         ForeignKey("plans.id", ondelete="CASCADE"), nullable=False
     )
-    ship_id: Mapped[int] = mapped_column(ForeignKey("ships.id"), nullable=False)
+    ship_id: Mapped[int | None] = mapped_column(
+        ForeignKey("ships.id", ondelete="SET NULL"), nullable=True
+    )
+    ship_name: Mapped[str] = mapped_column(String(120), nullable=False, default="")
     reason: Mapped[UnassignedReason] = mapped_column(
         SAEnum(UnassignedReason, name="unassigned_reason"), nullable=False
     )
 
     plan: Mapped["Plan"] = relationship(back_populates="unassigned_entries")
-    ship: Mapped["Ship"] = relationship()
+    ship: Mapped["Ship | None"] = relationship()

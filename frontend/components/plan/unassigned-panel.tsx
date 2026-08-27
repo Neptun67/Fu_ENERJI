@@ -20,8 +20,9 @@ export function UnassignedPanel({
   return (
     <ul className="divide-y divide-slate-100">
       {entries.map((u) => {
-        const ship = shipsById.get(u.ship_id);
-        const name = ship?.name ?? `#${u.ship_id}`;
+        // Name comes from the entry itself, so a deleted vessel still reads.
+        const ship = u.ship_id != null ? shipsById.get(u.ship_id) : undefined;
+        const name = u.ship_name || `#${u.ship_id ?? "?"}`;
         return (
           <li
             key={u.id}

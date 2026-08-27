@@ -101,6 +101,11 @@ export function PlanWorkspace({
     }
   }
 
+  // Outdated plans are kept and shown separately rather than deleted or rewritten:
+  // the record of what was decided should outlive the data it was decided from.
+  const current = plans.filter((p) => !p.stale_at);
+  const outdated = plans.filter((p) => p.stale_at);
+
   const total = ships.length;
   const unassignedCount = selected?.unassigned_entries.length ?? 0;
 
@@ -165,14 +170,28 @@ export function PlanWorkspace({
               }}
               className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm outline-none focus:border-sea-600 focus:ring-2 focus:ring-sea-100"
             >
-              {plans.map((p) => (
-                <option key={p.id} value={p.id}>
-                  #{p.id} - {formatDateTime(p.created_at)}
-                </option>
-              ))}
+              {current.length > 0 && (
+                <optgroup label="Current">
+                  {current.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      #{p.id} - {formatDateTime(p.created_at)}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {outdated.length > 0 && (
+                <optgroup label="Outdated">
+                  {outdated.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      #{p.id} - {formatDateTime(p.created_at)}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
             <span className="text-xs text-slate-500">
               {plans.length} {plans.length === 1 ? "run" : "runs"} saved
+              {outdated.length > 0 && `, ${outdated.length} outdated`}
             </span>
             {selected &&
               (confirmingDelete ? (
@@ -226,6 +245,23 @@ export function PlanWorkspace({
                 <Stat label="Buffer used" value={`${selected.buffer_min} min`} />
               </div>
 
+              {selected.stale_at && (
+                <div
+                  role="status"
+                  className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
+                >
+                  <p className="text-sm font-semibold text-amber-900">
+                    Outdated plan
+                  </p>
+                  <p className="mt-1 text-sm text-amber-900">
+                    {selected.stale_reason} on {formatDateTime(selected.stale_at)}. This plan
+                    is kept exactly as it was generated and is not recalculated, so it still
+                    shows what was decided at the time. Generate a new plan to schedule
+                    against the current fleet and quay.
+                  </p>
+                </div>
+              )}
+
               <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="mb-1 text-sm font-semibold text-sea-900">Berthing plan</h2>
                 <p className="mb-4 max-w-3xl text-xs leading-relaxed text-slate-600">
@@ -237,7 +273,7 @@ export function PlanWorkspace({
                   <span className="font-medium text-slate-700">manoeuvring buffer</span> before
                   the next ship can come alongside.
                 </p>
-                <GanttChart plan={selected} berths={berths} shipsById={shipsById} />
+                <GanttChart plan={selected} berths={berths} />
               </section>
 
               <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

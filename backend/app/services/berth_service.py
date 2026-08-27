@@ -1,9 +1,9 @@
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ConflictError, NotFoundError
+from app.core.exceptions import NotFoundError
 from app.models.berth import Berth
 from app.repositories.berth_repository import BerthRepository
+from app.repositories.plan_repository import PlanRepository
 from app.schemas.berth import BerthCreate, BerthUpdate
 
 
@@ -13,6 +13,7 @@ class BerthService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.repo = BerthRepository(db)
+        self.plans = PlanRepository(db)
 
     def list_berths(self) -> list[Berth]:
         return self.repo.list_all()
@@ -39,10 +40,14 @@ class BerthService:
         return berth
 
     def delete_berth(self, berth_id: int) -> None:
-        berth = self.get_berth(berth_id)
-        self.repo.delete(berth)
-        try:
-            self.db.commit()
-        except IntegrityError:
-            self.db.rollback()
-            raise ConflictError("This berth is used by a plan and cannot be deleted") from None
+        """Delete a berth, flagging any plan that used it as stale.
+
+        Plans are never rewritten. One that referenced this berth keeps every row
+        it was generated with - the name was copied at plan time - and is shown
+        under "Outdated" so the record of what was decided outlives the data it
+        was decided from.
+        """
+        obj = self.get_berth(berth_id)
+        self.plans.mark_stale_for_berth(obj.id, obj.name)
+        self.repo.delete(obj)
+        self.db.commit()

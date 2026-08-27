@@ -8,17 +8,22 @@ from app.models.unassigned_entry import UnassignedReason
 class AssignmentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    ship_id: int
-    berth_id: int
+    # Nullable: the vessel or berth may have been deleted since the plan was made.
+    ship_id: int | None
+    berth_id: int | None
+    # Names as they were at plan time, so the row stays readable either way.
+    ship_name: str
+    berth_name: str
     start_time: datetime
     end_time: datetime
-    waiting_min: int  # Assignment.waiting_min property'sinden okunur.
+    waiting_min: int  # read from the Assignment.waiting_min property
 
 
 class UnassignedEntryRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    ship_id: int
+    ship_id: int | None
+    ship_name: str
     reason: UnassignedReason
 
     @computed_field  # type: ignore[misc]
@@ -34,6 +39,10 @@ class PlanRead(BaseModel):
     created_at: datetime
     buffer_min: int
     total_waiting_min: int
+    # Set when a ship or berth the plan used was deleted. The plan is kept exactly
+    # as generated; this only tells the reader it no longer matches current data.
+    stale_at: datetime | None = None
+    stale_reason: str | None = None
     assignments: list[AssignmentRead] = []
     unassigned_entries: list[UnassignedEntryRead] = []
 

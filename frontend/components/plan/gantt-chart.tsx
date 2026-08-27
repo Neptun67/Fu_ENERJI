@@ -1,5 +1,5 @@
 import { formatTime, toMillis } from "@/lib/datetime";
-import type { Berth, Plan, Ship } from "@/lib/types";
+import type { Berth, Plan } from "@/lib/types";
 
 const TICKS = 6;
 const MINUTE = 60_000;
@@ -34,11 +34,9 @@ function Gridlines({ lefts }: { lefts: number[] }) {
 export function GanttChart({
   plan,
   berths,
-  shipsById,
 }: {
   plan: Plan;
   berths: Berth[];
-  shipsById: Map<number, Ship>;
 }) {
   if (plan.assignments.length === 0) {
     return (
@@ -68,13 +66,37 @@ export function GanttChart({
   });
   const tickLefts = ticks.map((t) => t.left);
 
-  const byBerth = new Map<number, typeof plan.assignments>();
-  for (const b of berths) byBerth.set(b.id, []);
-  for (const a of plan.assignments) {
-    if (!byBerth.has(a.berth_id)) byBerth.set(a.berth_id, []);
-    byBerth.get(a.berth_id)!.push(a);
+  // Rows come from the current quay, plus any berth this plan used that has since
+  // been deleted. Without the second part an outdated plan would silently lose a
+  // whole row, which is the opposite of keeping the record intact.
+  const rows: {
+    key: string;
+    name: string;
+    caption: string;
+    gone: boolean;
+    items: typeof plan.assignments;
+  }[] = [];
+  const present = new Set<number>();
+  for (const b of [...berths].sort((a, b) => a.id - b.id)) {
+    present.add(b.id);
+    rows.push({
+      key: `berth-${b.id}`,
+      name: b.name,
+      caption: `${b.length_m} m / ${b.depth_m} m`,
+      gone: false,
+      items: plan.assignments.filter((a) => a.berth_id === b.id),
+    });
   }
-  const rows = [...berths].sort((a, b) => a.id - b.id);
+  const removed = new Map<string, typeof plan.assignments>();
+  for (const a of plan.assignments) {
+    if (a.berth_id != null && present.has(a.berth_id)) continue;
+    const name = a.berth_name || `#${a.berth_id ?? "?"}`;
+    if (!removed.has(name)) removed.set(name, []);
+    removed.get(name)!.push(a);
+  }
+  for (const [name, items] of removed) {
+    rows.push({ key: `removed-${name}`, name, caption: "no longer exists", gone: true, items });
+  }
 
   return (
     <div>
@@ -96,19 +118,27 @@ export function GanttChart({
         </div>
 
         <div className="border-t border-slate-200">
-          {rows.map((berth) => {
-            const items = byBerth.get(berth.id) ?? [];
+          {rows.map((row) => {
+            const items = row.items;
             return (
               <div
-                key={berth.id}
+                key={row.key}
                 className="flex items-stretch border-b border-slate-100 last:border-0"
               >
                 <div className="flex w-36 shrink-0 flex-col justify-center px-3 py-2">
-                  <span className="truncate text-sm font-medium text-slate-800">
-                    {berth.name}
+                  <span
+                    className={`truncate text-sm font-medium ${
+                      row.gone ? "text-slate-500 line-through" : "text-slate-800"
+                    }`}
+                  >
+                    {row.name}
                   </span>
-                  <span className="text-[11px] tabular-nums text-slate-500">
-                    {berth.length_m} m / {berth.depth_m} m
+                  <span
+                    className={`text-[11px] tabular-nums ${
+                      row.gone ? "italic text-amber-700" : "text-slate-500"
+                    }`}
+                  >
+                    {row.caption}
                   </span>
                 </div>
                 <div className="relative h-14 flex-1">
@@ -124,7 +154,8 @@ export function GanttChart({
                     const start = toMillis(a.start_time);
                     const end = toMillis(a.end_time);
                     const eta = start - a.waiting_min * MINUTE;
-                    const shipName = shipsById.get(a.ship_id)?.name ?? `#${a.ship_id}`;
+                    // The name stored on the assignment, so a deleted vessel still reads.
+                    const shipName = a.ship_name || `#${a.ship_id ?? "?"}`;
                     const left = pct(start);
                     const width = Math.max(pct(end) - left, 0.6);
                     const bufWidth = pct(end + bufferMs) - pct(end);

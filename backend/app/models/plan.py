@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Integer, func
+from sqlalchemy import DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -25,6 +25,14 @@ class Plan(Base):
     buffer_min: Mapped[int] = mapped_column(Integer, nullable=False)
     # Objective metric: total waiting across assigned ships, in minutes.
     total_waiting_min: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    # Set when a ship or berth the plan used is deleted. The plan is never
+    # rewritten - it stays exactly as generated and is shown under "Outdated",
+    # so the record of what was decided survives the data it was decided from.
+    stale_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    stale_reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
     assignments: Mapped[list["Assignment"]] = relationship(
         back_populates="plan", cascade="all, delete-orphan"

@@ -33,8 +33,12 @@ export interface BerthInput {
 // --- plan ---
 export interface Assignment {
   id: number;
-  ship_id: number;
-  berth_id: number;
+  /** Null once the vessel or berth has been deleted; the name below still holds. */
+  ship_id: number | null;
+  berth_id: number | null;
+  /** Names as they were when the plan was generated. */
+  ship_name: string;
+  berth_name: string;
   start_time: string;
   end_time: string;
   waiting_min: number;
@@ -45,7 +49,8 @@ export type UnassignedReason =
   | "no_suitable_berth";
 export interface UnassignedEntry {
   id: number;
-  ship_id: number;
+  ship_id: number | null;
+  ship_name: string;
   reason: UnassignedReason;
   reason_message: string;
 }
@@ -54,6 +59,10 @@ export interface Plan {
   created_at: string;
   buffer_min: number;
   total_waiting_min: number;
+  /** Set when a ship or berth the plan used was deleted. The plan itself is
+   *  never rewritten - this only marks that it no longer matches current data. */
+  stale_at: string | null;
+  stale_reason: string | null;
   assignments: Assignment[];
   unassigned_entries: UnassignedEntry[];
 }

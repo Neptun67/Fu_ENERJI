@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Integer
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.types import waiting_minutes
@@ -24,10 +24,19 @@ class Assignment(Base):
     plan_id: Mapped[int] = mapped_column(
         ForeignKey("plans.id", ondelete="CASCADE"), nullable=False
     )
-    # No ondelete on ship/berth -> RESTRICT: a ship or berth referenced by a plan
-    # cannot be deleted, which keeps historical plans intact.
-    ship_id: Mapped[int] = mapped_column(ForeignKey("ships.id"), nullable=False)
-    berth_id: Mapped[int] = mapped_column(ForeignKey("berths.id"), nullable=False)
+    # SET NULL rather than RESTRICT: a ship or berth may be deleted while plans
+    # still reference it. The row survives with its name copy, so the plan stays
+    # readable; the plan itself is then marked stale (see Plan.stale_at).
+    ship_id: Mapped[int | None] = mapped_column(
+        ForeignKey("ships.id", ondelete="SET NULL"), nullable=True
+    )
+    berth_id: Mapped[int | None] = mapped_column(
+        ForeignKey("berths.id", ondelete="SET NULL"), nullable=True
+    )
+    # Names at plan time. Denormalised on purpose: without them a deleted vessel
+    # would leave a blank row in a plan that is meant to stay readable forever.
+    ship_name: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    berth_name: Mapped[str] = mapped_column(String(120), nullable=False, default="")
     # Copy of the ETA at plan time. Deliberate denormalisation: a plan is a
     # SNAPSHOT, so editing the ship later must not change a past plan.
     eta: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -35,8 +44,8 @@ class Assignment(Base):
     end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     plan: Mapped["Plan"] = relationship(back_populates="assignments")
-    ship: Mapped["Ship"] = relationship(back_populates="assignments")
-    berth: Mapped["Berth"] = relationship(back_populates="assignments")
+    ship: Mapped["Ship | None"] = relationship(back_populates="assignments")
+    berth: Mapped["Berth | None"] = relationship(back_populates="assignments")
 
     @property
     def waiting_min(self) -> int:

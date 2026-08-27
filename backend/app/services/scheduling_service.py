@@ -43,15 +43,24 @@ class SchedulingService:
 
         # 3) Domain result -> persisted Plan
         plan_row = Plan(buffer_min=buffer, total_waiting_min=result.total_waiting_min)
+        # Names are copied alongside the ids so the plan stays readable after the
+        # vessel or berth is deleted.
+        ship_names = {s.id: s.name for s in self.ships.list_all()}
+        berth_names = {b.id: b.name for b in self.berths.list_all()}
         plan_row.assignments = [
             Assignment(
                 ship_id=a.ship_id, berth_id=a.berth_id, eta=a.eta,
                 start_time=a.start_time, end_time=a.end_time,
+                ship_name=ship_names.get(a.ship_id, ""),
+                berth_name=berth_names.get(a.berth_id, ""),
             )
             for a in result.assignments
         ]
         plan_row.unassigned_entries = [
-            UnassignedEntry(ship_id=u.ship_id, reason=u.reason)
+            UnassignedEntry(
+                ship_id=u.ship_id, reason=u.reason,
+                ship_name=ship_names.get(u.ship_id, ""),
+            )
             for u in result.unassigned
         ]
         self.db.add(plan_row)

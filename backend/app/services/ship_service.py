@@ -1,8 +1,8 @@
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ConflictError, NotFoundError
+from app.core.exceptions import NotFoundError
 from app.models.ship import Ship
+from app.repositories.plan_repository import PlanRepository
 from app.repositories.ship_repository import ShipRepository
 from app.schemas.ship import ShipCreate, ShipUpdate
 
@@ -13,6 +13,7 @@ class ShipService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.repo = ShipRepository(db)
+        self.plans = PlanRepository(db)
 
     def list_ships(self) -> list[Ship]:
         return self.repo.list_all()
@@ -40,11 +41,14 @@ class ShipService:
         return ship
 
     def delete_ship(self, ship_id: int) -> None:
-        ship = self.get_ship(ship_id)
-        self.repo.delete(ship)
-        try:
-            self.db.commit()
-        except IntegrityError:
-            # FK RESTRICT: a ship referenced by a plan cannot be deleted.
-            self.db.rollback()
-            raise ConflictError("This ship is used by a plan and cannot be deleted") from None
+        """Delete a ship, flagging any plan that used it as stale.
+
+        Plans are never rewritten. One that referenced this ship keeps every row
+        it was generated with - the name was copied at plan time - and is shown
+        under "Outdated" so the record of what was decided outlives the data it
+        was decided from.
+        """
+        obj = self.get_ship(ship_id)
+        self.plans.mark_stale_for_ship(obj.id, obj.name)
+        self.repo.delete(obj)
+        self.db.commit()
