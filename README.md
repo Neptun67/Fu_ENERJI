@@ -340,20 +340,73 @@ berth, was noticed. That added a third reason, `NO_SUITABLE_BERTH`.
 
 ## AI process note
 
-> **This section is to be completed by the project owner.** The first three headings
-> correspond to the questions in the brief; the fourth records the pre-submission review.
+I set out to build this project *together with* AI rather than have it handed to me, and
+to keep the direction in my own hands throughout.
 
 ### Where in the process I used AI, and for what
 
-<!-- To be completed. -->
+I drove the sequencing: architecture and the data model first, then the ROADMAP, then the
+implementation phase by phase, approving each one before moving on. Within that structure
+I used Claude Code for the code-writing itself while I made the architectural calls.
+
+AI did most of the work in three areas in particular:
+
+- **Unit tests** for the planning core.
+- **Sample datasets** — including the deliberately unassignable ships that make the
+  "unassigned with a reason" flow visible.
+- **Comparative experiments** on scheduling algorithms, which I directed and then used to
+  decide (see the measurement table under [Planning algorithm](#planning-algorithm)).
+
+The user interface was proposed by AI — layout, Tailwind, the colour palette — and I
+approved it.
 
 ### What I changed or rejected in the AI output, and why
 
-<!-- To be completed. -->
+- **Persistent plans instead of a stateless design.** AI recommended starting stateless:
+  generate a plan, display it, discard it. I chose to persist plans instead, because being
+  able to review past plans matters for this kind of operations tool. That costs some
+  database normalisation, but at this scale it is not a real risk — a judgement I made
+  deliberately and repeated later when adding the ETA snapshot.
+
+- **I refused to accept the manoeuvring buffer as a bare number.** AI produced the
+  60-minute figure; I asked for it to be justified before it went into the plan. The
+  unberthing-plus-berthing rationale in the [Assumptions](#assumptions) section exists
+  because of that.
+
+- **The ordering rule.** The initial implementation used FCFS with no stated reason. I had
+  it compared against Shortest Job First across load regimes. The measurements showed SPT
+  wins on total waiting under capacity pressure — where berths are few and ships many —
+  while at low load the rules are indistinguishable. But SPT starved long ships. Rather
+  than accept that trade-off, I asked for **aging**, the standard remedy for starvation, to
+  be tested as well. Among the aged variants that were measured, HRRN was chosen because it
+  delivers the benefit without a constant to tune. The experiments themselves were run by
+  AI at my direction.
+
+- **Snapshotting the ETA.** Presented with two options for a consistency defect found in
+  review — copy the ETA onto each assignment, or document the limitation and leave it — I
+  chose to copy it, again accepting denormalisation as the cheaper cost.
+
+- I do not recall rejecting an AI proposal outright.
 
 ### Which decisions are entirely my own
 
-<!-- To be completed. -->
+- **Scope:** deploying the application to a live environment was my decision, not a
+  suggestion; so was persisting plans rather than discarding them.
+- **Process:** planning the architecture and data model before any code, writing the
+  ROADMAP before the implementation, and approving each phase individually.
+- **Insisting that assumptions be argued rather than asserted.** I did not author the
+  assumptions listed above, but the buffer value is justified rather than arbitrary because
+  I required it to be.
+- **Raising aging** as the answer to SPT's starvation problem, which changed the outcome of
+  the algorithm comparison.
+- **The denormalisation trade-off**, taken twice: persistent plans, and the ETA snapshot.
+
+**For balance:** most of the internal engineering decisions in this project — the pure
+domain layer, the layered architecture, PostgreSQL, the Gantt visualisation, the unit
+tests — were AI proposals that I approved without objection. Two defects that surfaced
+during development were caught by AI's own test runs rather than by me. My contribution was
+concentrated in direction, scope and the decisions listed above, and in the pre-submission
+review below.
 
 ### Independent pre-submission review
 
