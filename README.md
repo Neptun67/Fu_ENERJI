@@ -357,8 +357,11 @@ AI did most of the work in three areas in particular:
 - **Comparative experiments** on scheduling algorithms, which I directed and then used to
   decide (see the measurement table under [Planning algorithm](#planning-algorithm)).
 
-The user interface was proposed by AI — layout, Tailwind, the colour palette — and I
-approved it.
+The interface was written by AI throughout — layout, Tailwind, the colour palette, the
+timeline component. For the first version I gave no styling direction and simply approved
+what was proposed. The later redesign was different: I asked for it, set the brief (an
+interface built on HCI principles, with some maritime character), reviewed the result and
+sent parts of it back. What I found by using it is listed in the next section.
 
 ### What I changed or rejected in the AI output, and why
 
@@ -386,7 +389,21 @@ approved it.
   review — copy the ETA onto each assignment, or document the limitation and leave it — I
   chose to copy it, again accepting denormalisation as the cheaper cost.
 
-- I do not recall rejecting an AI proposal outright.
+- **I dropped the decorative artwork I had asked for.** For the redesign I wanted a port
+  and sea scene in the background. AI pushed back that decoration competes with dense data
+  in an operations tool and proposed confining it to the landing page; I asked for it
+  anyway, looked at the result, and concluded the objection was right. The illustration was
+  removed and only a faint colour wash kept. Reversing my own request once I could see it
+  was, in hindsight, the correct call.
+
+- **Three defects I found by using the interface**, each of which had passed AI review:
+  the landing page offered "Manage ships" but not berths, even though both are required
+  before planning; the timeline caption described the buffer but never mentioned the
+  waiting lane that had been added later, so the hatched area was undecodable; and "ETA"
+  appeared throughout the UI and both documents without ever being spelled out. All three
+  are the kind of thing that only surfaces when someone actually reads the screen.
+
+- I do not recall rejecting an AI proposal outright beyond the artwork above.
 
 ### Which decisions are entirely my own
 
@@ -400,6 +417,8 @@ approved it.
 - **Raising aging** as the answer to SPT's starvation problem, which changed the outcome of
   the algorithm comparison.
 - **The denormalisation trade-off**, taken twice: persistent plans, and the ETA snapshot.
+- **Commissioning the redesign and then cutting the decoration from it**, once seeing it
+  made the argument against it concrete.
 
 **For balance:** most of the internal engineering decisions in this project — the pure
 domain layer, the layered architecture, PostgreSQL, the Gantt visualisation, the unit
