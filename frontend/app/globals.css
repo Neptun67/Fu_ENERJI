@@ -2,10 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Nautical design tokens.
+
+  The palette is deliberately narrow: one sea-blue family carries identity and
+  interaction, warm sand carries surfaces, and amber/red are reserved as signal
+  colours. Reserving hue for meaning is what keeps a dense operations screen
+  readable - if everything is coloured, nothing stands out.
+*/
 :root {
   color-scheme: light;
+
+  --sea-900: #062a3a;
+  --sea-800: #08394d;
+  --sea-700: #0a4d66;
+  --sea-600: #0d6383;
+  --sea-500: #10809f;
+  --sea-400: #3fa3bd;
+  --sea-300: #7fc6d9;
+  --sea-200: #b9e0ea;
+  --sea-100: #dcf0f5;
+  --sea-50: #f0f9fb;
+
+  --sand-50: #faf9f6;
+  --sand-100: #f3f1ea;
+
+  /* Focus ring: one visible, consistent indicator everywhere (WCAG 2.4.7). */
+  --focus: #0d6383;
 }
 
 body {
   -webkit-font-smoothing: antialiased;
+  background-color: var(--sand-50);
+  /*
+    A single soft wash at the top of the page instead of decorative artwork.
+    It gives the palette somewhere to live without competing with data: every
+    content surface is opaque white, so contrast is never borrowed.
+  */
+  background-image: linear-gradient(180deg, var(--sea-50) 0%, var(--sand-50) 320px);
+  background-repeat: no-repeat;
+  background-attachment: scroll;
+}
+
+/* One focus treatment for every interactive element, rather than per-component. */
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/*
+  Respect the viewer's motion preference. The hero scene animates gently by
+  default; for anyone who has asked the OS to reduce motion, it holds still.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
