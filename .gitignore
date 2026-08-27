@@ -1,0 +1,25 @@
+# --- OS / editör ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# --- ortam sırları (asla commit'lenmez) ---
+.env
+.env.local
+.env.*.local
+
+# --- Python (backend) ---
+__pycache__/
+*.py[cod]
+*.db
+.pytest_cache/
+.venv/
+venv/
+
+# --- Node / Next (frontend) ---
+node_modules/
+.next/
+out/
+npm-debug.log*
