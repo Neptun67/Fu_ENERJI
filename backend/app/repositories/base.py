@@ -9,8 +9,8 @@ ModelType = TypeVar("ModelType", bound=Base)
 
 
 class BaseRepository(Generic[ModelType]):
-    """Ortak CRUD veri erişimi. Transaction (commit) sınırını SERVICE yönetir;
-    repository yalnızca oturum üzerinde okuma/yazma yapar."""
+    """Shared CRUD data access. The SERVICE owns the transaction boundary (commit);
+    a repository only reads from and writes to the session."""
 
     model: type[ModelType]
 
@@ -25,7 +25,7 @@ class BaseRepository(Generic[ModelType]):
 
     def add(self, obj: ModelType) -> ModelType:
         self.db.add(obj)
-        self.db.flush()  # id ataması için; commit service'te.
+        self.db.flush()  # assigns the id; the service commits
         return obj
 
     def delete(self, obj: ModelType) -> None:

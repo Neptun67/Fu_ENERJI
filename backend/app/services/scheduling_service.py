@@ -13,8 +13,8 @@ from app.repositories.ship_repository import ShipRepository
 
 
 class SchedulingService:
-    """Saf planlayıcıyı veritabanına bağlar: veriyi çeker, domain'e çevirir,
-    plan()'ı çağırır, sonucu kalıcı bir Plan olarak kaydeder."""
+    """Connects the pure planner to the database: loads data, maps it to domain
+    inputs, calls plan(), and persists the result as a Plan."""
 
     def __init__(self, db: Session) -> None:
         self.db = db
@@ -25,7 +25,7 @@ class SchedulingService:
     def generate(self, buffer_min: int | None = None) -> Plan:
         buffer = buffer_min if buffer_min is not None else settings.buffer_min_default
 
-        # 1) DB -> domain girdileri
+        # 1) DB -> domain inputs
         ship_inputs = [
             ShipInput(
                 id=s.id, eta=s.eta, length_m=s.length_m,
@@ -38,10 +38,10 @@ class SchedulingService:
             for b in self.berths.list_all()
         ]
 
-        # 2) Saf çekirdek
+        # 2) Pure core
         result = run_planner(ship_inputs, berth_inputs, buffer)
 
-        # 3) domain sonucu -> kalıcı Plan
+        # 3) Domain result -> persisted Plan
         plan_row = Plan(buffer_min=buffer, total_waiting_min=result.total_waiting_min)
         plan_row.assignments = [
             Assignment(
@@ -57,7 +57,7 @@ class SchedulingService:
         self.db.add(plan_row)
         self.db.commit()
 
-        # Serileştirme için ilişkileri eager-load ederek geri döndür.
+        # Return with relations eager-loaded for serialisation.
         return self.plans.get_with_details(plan_row.id)
 
     def list_plans(self) -> list[Plan]:
@@ -66,5 +66,5 @@ class SchedulingService:
     def get_plan(self, plan_id: int) -> Plan:
         plan_row = self.plans.get_with_details(plan_id)
         if plan_row is None:
-            raise NotFoundError(f"Plan bulunamadı (id={plan_id})")
+            raise NotFoundError(f"Plan not found (id={plan_id})")
         return plan_row

@@ -14,16 +14,16 @@ if TYPE_CHECKING:
 
 
 class Plan(Base):
-    """Üretilmiş bir yanaşma planının kalıcı kaydı (geçmişe dönük inceleme)."""
+    """Persisted record of a generated berthing plan, for retrospective review."""
     __tablename__ = "plans"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    # Planın üretildiği andaki tampon değeri (parametre anlık görüntüsü).
+    # Buffer value at plan time (parameter snapshot).
     buffer_min: Mapped[int] = mapped_column(Integer, nullable=False)
-    # Hedef metrik: atanan gemilerin toplam beklemesi (dk).
+    # Objective metric: total waiting across assigned ships, in minutes.
     total_waiting_min: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     assignments: Mapped[list["Assignment"]] = relationship(

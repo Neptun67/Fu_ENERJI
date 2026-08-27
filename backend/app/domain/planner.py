@@ -1,21 +1,21 @@
-"""Yanaşma planlama çekirdeği — saf, altyapısız, deterministik.
+"""Berth planning core — pure, infrastructure-free, deterministic.
 
-Yaklaşım (dispatch / sevk döngüsü):
-  1. Fiziksel olarak hiçbir rıhtıma sığmayan gemileri baştan ayır (uzunluk/derinlik).
-  2. Kalanlar için, her adımda bir sonraki karar anını (`now`) bul: herhangi bir
-     geminin başlayabileceği en erken zaman.
-  3. O anda başlayabilecek gemiler arasından ÖNCELİK KURALI ile birini seç
-     (bkz. `_priority_hrrn`), en az israf eden uygun rıhtıma (best-fit) yerleştir.
-  4. Rıhtımı, bitiş + manevra tamponu kadar meşgul işaretle; kalan yoksa bitir.
+Approach (dispatch loop):
+  1. Separate out ships that physically fit no berth at all (length/draft).
+  2. For the rest, at each step find the next decision point (`now`): the earliest
+     time at which any remaining ship could start.
+  3. Among the ships that can start at that moment, pick one using a PRIORITY RULE
+     (see `_priority_hrrn`) and place it on the least-wasteful feasible berth
+     (best-fit).
+  4. Mark that berth busy until end + manoeuvring buffer; repeat until none remain.
 
-Öncelik kuralı neden HRRN?
-  Ölçtüğümüz alternatifler: FCFS (varış sırası), SPT (en kısa elleçleme önce),
-  ve aging'li SPT varyantları. Düz SPT toplam beklemeyi azaltıyor ama uzun
-  gemileri açlığa itiyor (en kötü bekleme %70'e kadar kötüleşti). HRRN,
-  kazancın büyük kısmını korurken bu bedeli küçültüyor ve ayarlanacak bir
-  sabit içermiyor. Ölçüm tablosu README'de.
+Why HRRN as the priority rule?
+  Measured alternatives: FCFS (arrival order), SPT (shortest handling first), and
+  SPT with aging. Plain SPT lowers total waiting but starves long ships (worst-case
+  waiting degraded by up to 70%). HRRN keeps most of the gain while shrinking that
+  cost, and has no constant to tune. Measurement table is in the README.
 
-Optimal değildir; makul, deterministik ve açıklanabilir bir sezgiseldir.
+Not optimal; a reasonable, deterministic and explainable heuristic.
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ from app.domain.types import (
 
 
 def _reason_for(ship: ShipInput, berths: list[BerthInput]) -> UnassignedReason:
-    """Uygun rıhtım yokken atanamama nedenini belirler."""
+    """Determine why a ship could not be assigned to any berth."""
     long_enough = any(b.length_m >= ship.length_m for b in berths)
     deep_enough = any(b.depth_m >= ship.draft_m for b in berths)
     if not long_enough and not deep_enough:
@@ -41,24 +41,24 @@ def _reason_for(ship: ShipInput, berths: list[BerthInput]) -> UnassignedReason:
         return UnassignedReason.NO_SUITABLE_LENGTH
     if not deep_enough:
         return UnassignedReason.NO_SUITABLE_DEPTH
-    # her iki kısıt tek tek karşılanıyor ama tek bir rıhtımda birlikte değil
+    # Each constraint is satisfied by some berth, but never both by the same one.
     return UnassignedReason.NO_SUITABLE_BERTH
 
 
 def _priority_hrrn(ready: list[ShipInput], now: datetime) -> ShipInput:
-    """Öncelik kuralı: HRRN (Highest Response Ratio Next).
+    """Priority rule: HRRN (Highest Response Ratio Next).
 
-    oran = (bekleme + elleçleme) / elleçleme
+    ratio = (waiting + handling) / handling
 
-    SPT'nin toplam beklemeyi azaltma avantajını korur, ama bekleyen gemi
-    yaşlandıkça oranı büyüdüğü için açlığa (starvation) düşmez. Parametresizdir;
-    ayarlanacak bir sabit yoktur. Eşitlikte id ile determinizm sağlanır.
+    Keeps SPT's advantage on total waiting, but a waiting ship's ratio grows over
+    time, so it does not starve. Parameter-free: there is no constant to tune.
+    Ties are broken by id to keep the plan deterministic.
     """
-    def oran(s: ShipInput) -> float:
-        bekleme = max(0.0, (now - s.eta).total_seconds() / 60)
-        return (bekleme + s.handling_time_min) / s.handling_time_min
+    def ratio(s: ShipInput) -> float:
+        waiting = max(0.0, (now - s.eta).total_seconds() / 60)
+        return (waiting + s.handling_time_min) / s.handling_time_min
 
-    return max(ready, key=lambda s: (oran(s), -s.id))
+    return max(ready, key=lambda s: (ratio(s), -s.id))
 
 
 def plan(
@@ -66,11 +66,11 @@ def plan(
     berths: list[BerthInput],
     buffer_min: int,
 ) -> PlanResult:
-    """Verilen gemi/rıhtım kümesi ve manevra tamponu için bir yanaşma planı üretir."""
+    """Produce a berthing plan for the given ships, berths and manoeuvring buffer."""
     buffer = timedelta(minutes=buffer_min)
 
-    # Her rıhtım için: bir sonraki geminin başlayabileceği en erken an.
-    # None -> rıhtım hiç kullanılmadı, ilk gemi ETA'sında başlayabilir (tampon yok).
+    # Per berth: the earliest moment the next ship may start.
+    # None -> berth never used; the first ship starts at its ETA (no buffer).
     available_from: dict[int, datetime | None] = {b.id: None for b in berths}
 
     assignments: list[PlannedAssignment] = []
@@ -82,7 +82,7 @@ def plan(
             if b.length_m >= ship.length_m and b.depth_m >= ship.draft_m
         ]
 
-    # Fiziksel olarak hiçbir rıhtıma sığmayanlar sıralamadan bağımsızdır; baştan ayrılır.
+    # Ships that fit no berth are independent of ordering; separate them up front.
     remaining: list[ShipInput] = []
     for ship in sorted(ships, key=lambda s: s.id):
         if feasible_for(ship):
@@ -90,7 +90,7 @@ def plan(
         else:
             unassigned.append(UnassignedShip(ship.id, _reason_for(ship, berths)))
 
-    # Dispatch döngüsü: her adımda "şu an başlayabilecek" gemiler arasından seçim yapılır.
+    # Dispatch loop: at each step choose among the ships that can start right now.
     while remaining:
         options: dict[int, tuple[datetime, BerthInput]] = {}
         for ship in remaining:
@@ -98,7 +98,7 @@ def plan(
                 avail = available_from[b.id]
                 return ship.eta if avail is None else max(ship.eta, avail)
 
-            # Eşitlikte en az israf eden rıhtım (best-fit).
+            # On ties, prefer the least wasteful berth (best-fit).
             best = min(
                 feasible_for(ship),
                 key=lambda b: (start_on(b), b.length_m, b.depth_m, b.id),
@@ -121,7 +121,7 @@ def plan(
                 end_time=end,
             )
         )
-        # Sonraki gemi bu rıhtımda en erken (bitiş + tampon) sonrası başlayabilir.
+        # The next ship on this berth may start no earlier than end + buffer.
         available_from[berth.id] = end + buffer
         remaining.remove(ship)
 

@@ -30,7 +30,7 @@ export interface BerthInput {
   depth_m: number;
 }
 
-// --- plan (Faz 6'da kullanılacak) ---
+// --- plan ---
 export interface Assignment {
   id: number;
   ship_id: number;

@@ -9,7 +9,7 @@ export function UnassignedPanel({
 }) {
   if (entries.length === 0) {
     return (
-      <p className="text-sm text-slate-500">Tüm gemiler bir rıhtıma atandı.</p>
+      <p className="text-sm text-slate-500">All ships were assigned to a berth.</p>
     );
   }
   return (

@@ -6,8 +6,8 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-# Enum tek kaynaktan gelir: saf domain katmanı. Böylece model ve planlayıcı
-# aynı 'atanamama nedeni' tanımını paylaşır.
+# The enum has a single source: the pure domain layer. Model and planner therefore
+# share one definition of why a ship was not assigned.
 from app.domain.types import UnassignedReason
 from app.models.base import Base
 
@@ -19,7 +19,7 @@ __all__ = ["UnassignedEntry", "UnassignedReason"]
 
 
 class UnassignedEntry(Base):
-    """Bir planda atanamayan gemi + nedeni."""
+    """A ship that could not be assigned in a plan, with its reason."""
     __tablename__ = "unassigned_entries"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

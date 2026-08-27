@@ -16,7 +16,7 @@ export default async function PlanPage() {
       listPlans(),
     ]);
   } catch {
-    error = "Veriler yüklenemedi. Backend çalışıyor mu?";
+    error = "Could not load data. Is the backend running?";
   }
 
   return (
@@ -24,7 +24,7 @@ export default async function PlanPage() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight text-slate-900">Plan</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Kurallara uygun yanaşma planını üretin ve zaman çizelgesinde görün.
+          Generate a rule-compliant berthing plan and view it on the timeline.
         </p>
       </div>
       {error ? (

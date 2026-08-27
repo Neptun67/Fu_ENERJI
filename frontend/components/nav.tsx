@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links = [
-  { href: "/ships", label: "Gemiler" },
-  { href: "/berths", label: "Rıhtımlar" },
+  { href: "/ships", label: "Ships" },
+  { href: "/berths", label: "Berths" },
   { href: "/plan", label: "Plan" },
 ];
 
@@ -16,10 +16,10 @@ export function NavBar() {
       <nav className="mx-auto flex max-w-6xl items-center gap-8 px-4">
         <Link href="/" className="flex items-center gap-2 py-4">
           <span className="grid h-7 w-7 place-items-center rounded bg-teal-700 text-xs font-bold text-white">
-            L
+            P
           </span>
           <span className="text-sm font-semibold tracking-tight text-slate-900">
-            Liman Planlama
+            Port Planning
           </span>
         </Link>
         <div className="flex items-center gap-1">

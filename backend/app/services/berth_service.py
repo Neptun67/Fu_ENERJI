@@ -8,7 +8,7 @@ from app.schemas.berth import BerthCreate, BerthUpdate
 
 
 class BerthService:
-    """Rıhtım iş mantığı."""
+    """Berth business logic."""
 
     def __init__(self, db: Session) -> None:
         self.db = db
@@ -20,7 +20,7 @@ class BerthService:
     def get_berth(self, berth_id: int) -> Berth:
         berth = self.repo.get(berth_id)
         if berth is None:
-            raise NotFoundError(f"Rıhtım bulunamadı (id={berth_id})")
+            raise NotFoundError(f"Berth not found (id={berth_id})")
         return berth
 
     def create_berth(self, payload: BerthCreate) -> Berth:
@@ -45,4 +45,4 @@ class BerthService:
             self.db.commit()
         except IntegrityError:
             self.db.rollback()
-            raise ConflictError("Bu rıhtım bir planda kullanıldığı için silinemez") from None
+            raise ConflictError("This berth is used by a plan and cannot be deleted") from None

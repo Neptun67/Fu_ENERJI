@@ -8,7 +8,7 @@ from app.schemas.ship import ShipCreate, ShipUpdate
 
 
 class ShipService:
-    """Gemi iş mantığı: varlık kontrolü, transaction sınırı, kısıt hataları."""
+    """Ship business logic: existence checks, transaction boundary, constraint errors."""
 
     def __init__(self, db: Session) -> None:
         self.db = db
@@ -20,7 +20,7 @@ class ShipService:
     def get_ship(self, ship_id: int) -> Ship:
         ship = self.repo.get(ship_id)
         if ship is None:
-            raise NotFoundError(f"Gemi bulunamadı (id={ship_id})")
+            raise NotFoundError(f"Ship not found (id={ship_id})")
         return ship
 
     def create_ship(self, payload: ShipCreate) -> Ship:
@@ -32,7 +32,7 @@ class ShipService:
 
     def update_ship(self, ship_id: int, payload: ShipUpdate) -> Ship:
         ship = self.get_ship(ship_id)
-        # Yalnızca gönderilen alanları uygula (kısmi güncelleme).
+        # Apply only the fields that were sent (partial update).
         for field, value in payload.model_dump(exclude_unset=True).items():
             setattr(ship, field, value)
         self.db.commit()
@@ -45,6 +45,6 @@ class ShipService:
         try:
             self.db.commit()
         except IntegrityError:
-            # FK RESTRICT: gemi bir planda geçiyorsa silinemez.
+            # FK RESTRICT: a ship referenced by a plan cannot be deleted.
             self.db.rollback()
-            raise ConflictError("Bu gemi bir planda kullanıldığı için silinemez") from None
+            raise ConflictError("This ship is used by a plan and cannot be deleted") from None

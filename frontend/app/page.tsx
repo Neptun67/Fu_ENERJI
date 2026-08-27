@@ -3,18 +3,18 @@ import Link from "next/link";
 const sections = [
   {
     href: "/ships",
-    title: "Gemiler",
-    body: "Gelen gemileri ekleyin: varış zamanı, uzunluk, su çekimi ve elleçleme süresi.",
+    title: "Ships",
+    body: "Add incoming ships: arrival time, length, draft and handling time.",
   },
   {
     href: "/berths",
-    title: "Rıhtımlar",
-    body: "Rıhtımları tanımlayın: uzunluk ve derinlik kapasiteleri.",
+    title: "Berths",
+    body: "Define your berths: length and depth capacity.",
   },
   {
     href: "/plan",
     title: "Plan",
-    body: "Kurallara uygun yanaşma planını otomatik üretin ve görselleştirin.",
+    body: "Generate a rule-compliant berthing plan automatically and visualise it.",
   },
 ];
 
@@ -23,11 +23,11 @@ export default function HomePage() {
     <div className="space-y-8">
       <div className="max-w-2xl">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-          Yanaşma planlama
+          Berth planning
         </h1>
         <p className="mt-2 text-slate-600">
-          Gemi ve rıhtım verinizi girin, ardından toplam bekleme süresini azaltan,
-          kurallara uygun bir yanaşma planını tek tıkla üretin.
+          Enter your ship and berth data, then generate a rule-compliant berthing
+          plan that reduces total waiting time with a single click.
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">

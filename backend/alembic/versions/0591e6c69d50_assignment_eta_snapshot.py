@@ -18,10 +18,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Mevcut satırlar için değer yok; NOT NULL'u doğrudan koyamayız.
-    # 1) Kolonu nullable ekle
+    # Existing rows have no value, so NOT NULL cannot be applied directly.
+    # 1) Add the column as nullable
     op.add_column("assignments", sa.Column("eta", sa.DateTime(timezone=True), nullable=True))
-    # 2) Geçmiş atamaları ilgili geminin ETA'sıyla doldur (elde en iyi değer bu)
+    # 2) Backfill past assignments from each ship's ETA (the best value available)
     op.execute(
         """
         UPDATE assignments a
@@ -30,7 +30,7 @@ def upgrade() -> None:
         WHERE a.ship_id = s.id AND a.eta IS NULL
         """
     )
-    # 3) Artık boş satır kalmadı; kısıtı uygula
+    # 3) No empty rows remain; enforce the constraint
     op.alter_column("assignments", "eta", nullable=False)
 
 

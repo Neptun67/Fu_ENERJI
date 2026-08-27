@@ -1,10 +1,10 @@
 class AppError(Exception):
-    """Uygulama seviyesi hataların ortak tabanı."""
+    """Base class for application-level errors."""
 
 
 class NotFoundError(AppError):
-    """İstenen kayıt bulunamadı (-> HTTP 404)."""
+    """The requested record does not exist (-> HTTP 404)."""
 
 
 class ConflictError(AppError):
-    """İşlem bir kısıt nedeniyle yapılamadı, ör. FK ihlali (-> HTTP 409)."""
+    """The operation violates a constraint, e.g. a foreign key (-> HTTP 409)."""

@@ -5,8 +5,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class BerthBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=120)
-    length_m: float = Field(..., gt=0, description="Metre")
-    depth_m: float = Field(..., gt=0, description="Derinlik, metre")
+    length_m: float = Field(..., gt=0, description="Length in metres")
+    depth_m: float = Field(..., gt=0, description="Depth in metres")
 
 
 class BerthCreate(BerthBase):

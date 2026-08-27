@@ -3,23 +3,23 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Uygulama ayarları; değerler ortam değişkenlerinden (.env / platform) okunur."""
+    """Application settings, read from environment variables (.env / platform)."""
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    # DB bağlantısı asla koda gömülmez.
+    # The DB connection string is never hardcoded.
     database_url: str = "postgresql+psycopg://port:port@localhost:5432/port_planning"
 
-    # Manevra tamponu varsayılanı (dk). Gerekçe ROADMAP'te.
+    # Default manoeuvring buffer in minutes. Rationale in the README.
     buffer_min_default: int = 60
 
-    # CORS: virgülle ayrılmış origin listesi (str tutulur; env'de JSON gerekmesin diye).
-    # Prod'da örn: "https://uygulamam.vercel.app"
+    # CORS: comma-separated origin list, kept as a str so the env var need not be
+    # JSON. In production e.g. "https://myapp.vercel.app"
     cors_origins: str = "http://localhost:3000"
 
     @field_validator("database_url", mode="before")
     @classmethod
     def _normalize_database_url(cls, v: str) -> str:
-        # Railway/Heroku 'postgres://' verir; psycopg v3 sürücüsüne çeviririz.
+        # Railway and Heroku hand out 'postgres://'; map it to the psycopg v3 driver.
         if isinstance(v, str):
             if v.startswith("postgres://"):
                 return v.replace("postgres://", "postgresql+psycopg://", 1)
@@ -29,8 +29,8 @@ class Settings(BaseSettings):
 
     @property
     def cors_origin_list(self) -> list[str]:
-        # Panelden yapıştırılan URL'ler sonda '/' taşıyabilir; tarayıcı Origin
-        # başlığını slash'sız gönderdiği için eşleşme bozulur. Normalize ederiz.
+        # URLs pasted from a hosting dashboard may carry a trailing '/'. Browsers send
+        # the Origin header without one, so the match would silently fail. Normalise.
         origins = (o.strip().rstrip("/") for o in self.cors_origins.split(","))
         return [o for o in origins if o]
 

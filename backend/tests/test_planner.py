@@ -1,4 +1,4 @@
-"""planner çekirdeğinin birim testleri — saf, DB'siz, deterministik."""
+"""Unit tests for the planner core: pure, database-free, deterministic."""
 from datetime import datetime, timedelta, timezone
 
 from app.domain.planner import plan
@@ -20,7 +20,7 @@ def test_single_ship_assigned_at_eta():
     assert len(res.assignments) == 1
     a = res.assignments[0]
     assert a.berth_id == 1
-    assert a.start_time == T0            # ilk gemi ETA'sında başlar (tampon yok)
+    assert a.start_time == T0            # first ship starts at its ETA, no buffer
     assert a.waiting_min == 0
     assert res.unassigned == []
 
@@ -42,7 +42,7 @@ def test_too_deep_is_unassigned_depth():
 
 
 def test_combined_infeasible_is_no_suitable_berth():
-    # Uzun-ama-sığ VE kısa-ama-derin rıhtımlar var; gemi ikisini de tek başına kullanamaz.
+    # A long-but-shallow and a short-but-deep berth exist; neither alone fits the ship.
     s = ship(1, length=250, draft=12)
     berths = [berth(1, length=300, depth=6), berth(2, length=100, depth=20)]
     res = plan([s], berths, buffer_min=60)
@@ -50,57 +50,58 @@ def test_combined_infeasible_is_no_suitable_berth():
 
 
 def test_two_ships_same_berth_buffer_applied():
-    # Aynı ETA, tek rıhtım: ikinci gemi birinciyi + tamponu bekler.
+    # Same ETA, one berth: the second ship waits for the first plus the buffer.
     res = plan([ship(1, handling=120), ship(2, handling=120)], [berth(1)], buffer_min=60)
     a1, a2 = sorted(res.assignments, key=lambda a: a.start_time)
     gap = a2.start_time - a1.end_time
-    assert gap == timedelta(minutes=60)          # tampon tam olarak uygulandı
-    assert a2.waiting_min == 180                 # 120 elleçleme + 60 tampon
+    assert gap == timedelta(minutes=60)          # buffer applied exactly
+    assert a2.waiting_min == 180                 # 120 handling + 60 buffer
 
 
 def test_two_ships_two_berths_run_in_parallel():
     res = plan([ship(1), ship(2)], [berth(1), berth(2)], buffer_min=60)
     assert len(res.assignments) == 2
-    assert {a.berth_id for a in res.assignments} == {1, 2}   # farklı rıhtımlar
+    assert {a.berth_id for a in res.assignments} == {1, 2}   # different berths
     assert all(a.start_time == T0 for a in res.assignments)  # ikisi de beklemeden
     assert res.total_waiting_min == 0
 
 
 def test_ship_cannot_start_before_its_eta():
-    # Henüz varmamış gemi, rıhtım boş olsa bile öne alınamaz (4. kural).
+    # A ship that has not arrived cannot be pulled forward, even on an idle berth (rule 4).
     late = ship(1, eta=T0 + timedelta(hours=1))       # 09:00
     early = ship(2, eta=T0)                           # 08:00
     res = plan([late, early], [berth(1)], buffer_min=60)
     by_time = sorted(res.assignments, key=lambda a: a.start_time)
-    assert by_time[0].ship_id == 2                    # yalnızca varmış olan başlayabilir
+    assert by_time[0].ship_id == 2                    # only the arrived ship may start
     assert by_time[1].ship_id == 1
     assert all(a.start_time >= a.eta for a in res.assignments)
 
 
 def test_hrrn_rescues_a_long_ship_from_starvation():
-    """HRRN'in varlık nedeni: sürekli kısa gemi akışı altında uzun gemi sona itilmez.
+    """Why HRRN exists: a long ship is not pushed to the back under a stream of
+    short arrivals.
 
-    Kurgu: uzun gemi (600 dk) T0'da varır ama EN YÜKSEK id'ye sahiptir, yani ilk
-    karar anındaki eşitliği kaybeder. Ardından her 90 dk'da bir kısa gemi (60 dk)
-    gelir. Düz SPT her adımda taze kısa gemiyi seçip uzun gemiyi en sona atardı.
-    HRRN'de uzun geminin bekleme/elleçleme oranı büyüdüğü için bir sonraki karar
-    anında önceliği taze gemilerinkini aşar ve kurtarılır.
+    Setup: the long ship (600 min) arrives at T0 but carries the HIGHEST id, so it
+    loses the tie at the first decision point. A short ship (60 min) then arrives
+    every 90 minutes. Plain SPT would keep picking the fresh short ship and leave
+    the long one until last. Under HRRN the long ship's waiting/handling ratio
+    grows, so at the next decision point it outranks the fresh arrivals.
 
-    Not: HRRN açlığı sınırlar, tamamen ortadan kaldırmaz — aynı anda beklemiş
-    kısa gemiler oranı daha hızlı büyüttüğü için hâlâ öne geçebilir.
+    Note: HRRN bounds starvation, it does not eliminate it. Short ships that have
+    waited the same time grow their ratio faster and can still go first.
     """
-    UZUN = 99
-    kisalar = [ship(i, eta=T0 + timedelta(minutes=90 * (i - 1)), handling=60)
-               for i in range(1, 8)]
-    uzun = ship(UZUN, eta=T0, handling=600)
-    res = plan([*kisalar, uzun], [berth(1)], buffer_min=30)
+    LONG = 99
+    shorts = [ship(i, eta=T0 + timedelta(minutes=90 * (i - 1)), handling=60)
+              for i in range(1, 8)]
+    long_ship = ship(LONG, eta=T0, handling=600)
+    res = plan([*shorts, long_ship], [berth(1)], buffer_min=30)
 
-    sirali = [a.ship_id for a in sorted(res.assignments, key=lambda a: a.start_time)]
-    uzun_bekleme = next(a.waiting_min for a in res.assignments if a.ship_id == UZUN)
+    order = [a.ship_id for a in sorted(res.assignments, key=lambda a: a.start_time)]
+    long_waiting = next(a.waiting_min for a in res.assignments if a.ship_id == LONG)
 
-    assert sirali[-1] != UZUN, f"uzun gemi sona itildi: {sirali}"
-    # Düz SPT bu kurguda 630 dk bekletiyor; HRRN belirgin biçimde altında kalmalı.
-    assert uzun_bekleme < 300, f"uzun gemi açlığa düştü: {uzun_bekleme} dk"
+    assert order[-1] != LONG, f"long ship pushed to the back: {order}"
+    # Plain SPT makes it wait 630 min here; HRRN must stay well below that.
+    assert long_waiting < 300, f"long ship starved: {long_waiting} min"
 
 
 def test_total_waiting_is_sum():
@@ -126,7 +127,7 @@ def test_no_berths_all_unassigned():
 
 
 def test_waiting_minutes_is_clamped_at_zero():
-    # Kural tek kaynakta (waiting_minutes); başlangıç ETA'dan önceyse bekleme negatif olmaz.
+    # The rule has one source (waiting_minutes); a start before ETA never goes negative.
     assert waiting_minutes(T0 + timedelta(minutes=90), T0) == 90
     assert waiting_minutes(T0, T0) == 0
     assert waiting_minutes(T0 - timedelta(minutes=30), T0) == 0

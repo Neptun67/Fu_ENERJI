@@ -10,14 +10,14 @@ export default async function ShipsPage() {
   try {
     ships = await listShips();
   } catch {
-    error = "Gemiler yüklenemedi. Backend çalışıyor mu?";
+    error = "Could not load ships. Is the backend running?";
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Gemiler</h1>
-        <p className="mt-1 text-sm text-slate-600">Limana gelen gemileri yönetin.</p>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Ships</h1>
+        <p className="mt-1 text-sm text-slate-600">Manage the ships arriving at the port.</p>
       </div>
       {error ? (
         <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">

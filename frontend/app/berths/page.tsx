@@ -10,14 +10,14 @@ export default async function BerthsPage() {
   try {
     berths = await listBerths();
   } catch {
-    error = "Rıhtımlar yüklenemedi. Backend çalışıyor mu?";
+    error = "Could not load berths. Is the backend running?";
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Rıhtımlar</h1>
-        <p className="mt-1 text-sm text-slate-600">Limandaki rıhtımları yönetin.</p>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Berths</h1>
+        <p className="mt-1 text-sm text-slate-600">Manage the berths in the port.</p>
       </div>
       {error ? (
         <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">

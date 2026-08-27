@@ -17,14 +17,14 @@ def generate_plan(
     payload: PlanGenerateRequest | None = Body(default=None),
     service: SchedulingService = Depends(get_service),
 ):
-    """Mevcut gemi/rıhtım verisiyle yeni bir plan üretir ve kaydeder."""
+    """Generate and persist a new plan from the current ships and berths."""
     buffer_min = payload.buffer_min if payload else None
     return service.generate(buffer_min=buffer_min)
 
 
 @router.get("", response_model=list[PlanRead])
 def list_plans(service: SchedulingService = Depends(get_service)):
-    """Üretilmiş planların geçmişi (en yeni önce)."""
+    """History of generated plans, newest first."""
     return service.list_plans()
 
 

@@ -1,5 +1,5 @@
-// API ISO (UTC) <-> <input type="datetime-local"> dönüşümleri.
-// Sadelik için tüm saatler UTC olarak ele alınır ve arayüzde UTC etiketiyle gösterilir.
+// Conversions between API ISO (UTC) and <input type="datetime-local">.
+// For simplicity every time is treated as UTC and labelled as UTC in the UI.
 
 export function isoToInput(iso: string): string {
   // "2026-08-26T08:00:00Z" -> "2026-08-26T08:00"
@@ -18,7 +18,7 @@ function toDate(iso: string): Date {
 
 export function formatDateTime(iso: string): string {
   return (
-    toDate(iso).toLocaleString("tr-TR", {
+    toDate(iso).toLocaleString("en-GB", {
       dateStyle: "short",
       timeStyle: "short",
       timeZone: "UTC",
@@ -27,7 +27,7 @@ export function formatDateTime(iso: string): string {
 }
 
 export function formatTime(iso: string): string {
-  return toDate(iso).toLocaleTimeString("tr-TR", {
+  return toDate(iso).toLocaleTimeString("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
     timeZone: "UTC",

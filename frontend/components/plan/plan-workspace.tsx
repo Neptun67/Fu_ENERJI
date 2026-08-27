@@ -50,7 +50,7 @@ export function PlanWorkspace({
       setPlans((prev) => [created, ...prev]);
       setSelectedId(created.id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Plan üretilemedi");
+      setError(e instanceof Error ? e.message : "Could not generate plan");
     } finally {
       setBusy(false);
     }
@@ -58,10 +58,10 @@ export function PlanWorkspace({
 
   return (
     <div className="space-y-6">
-      {/* kontroller */}
+      {/* controls */}
       <div className="flex flex-wrap items-end gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-medium text-slate-600">Manevra tamponu (dk)</span>
+          <span className="font-medium text-slate-600">Manoeuvring buffer (min)</span>
           <input
             type="number"
             min="1"
@@ -74,14 +74,14 @@ export function PlanWorkspace({
           />
         </label>
         <Button onClick={generate} disabled={busy || noData}>
-          {busy ? "Üretiliyor…" : "Plan üret"}
+          {busy ? "Generating…" : "Generate plan"}
         </Button>
         <span className="text-xs text-slate-500">
-          Boş bırakılırsa varsayılan 60 dk kullanılır.
+          Leave blank to use the default of 60 min.
         </span>
         {noData && (
           <p className="w-full text-sm text-amber-700">
-            Plan üretmek için önce en az bir gemi ve bir rıhtım ekleyin.
+            Add at least one ship and one berth before generating a plan.
           </p>
         )}
         {error && (
@@ -93,14 +93,14 @@ export function PlanWorkspace({
 
       {plans.length === 0 ? (
         <p className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-          Henüz plan üretilmedi. Yukarıdaki “Plan üret” ile ilk planı oluşturun.
+          No plan generated yet. Use "Generate plan" above to create the first one.
         </p>
       ) : (
         <>
-          {/* geçmiş + özet */}
+          {/* history + summary */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <label className="flex items-center gap-2 text-sm text-slate-600">
-              Plan geçmişi
+              Plan history
               <select
                 value={selectedId ?? ""}
                 onChange={(e) => setSelectedId(Number(e.target.value))}
@@ -118,22 +118,22 @@ export function PlanWorkspace({
           {selected && (
             <>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <Stat label="Atanan gemi" value={String(selected.assignments.length)} />
-                <Stat label="Atanamayan" value={String(selected.unassigned_entries.length)} />
-                <Stat label="Toplam bekleme" value={`${selected.total_waiting_min} dk`} />
-                <Stat label="Kullanılan tampon" value={`${selected.buffer_min} dk`} />
+                <Stat label="Assigned ships" value={String(selected.assignments.length)} />
+                <Stat label="Unassigned" value={String(selected.unassigned_entries.length)} />
+                <Stat label="Total waiting" value={`${selected.total_waiting_min} min`} />
+                <Stat label="Buffer used" value={`${selected.buffer_min} min`} />
               </div>
 
               <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="mb-4 text-sm font-semibold text-slate-900">
-                  Yanaşma planı
+                  Berthing plan
                 </h2>
                 <GanttChart plan={selected} berths={berths} shipsById={shipsById} />
               </section>
 
               <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="mb-3 text-sm font-semibold text-slate-900">
-                  Atanamayan gemiler
+                  Unassigned ships
                 </h2>
                 <UnassignedPanel
                   entries={selected.unassigned_entries}

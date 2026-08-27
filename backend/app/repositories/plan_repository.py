@@ -10,7 +10,7 @@ class PlanRepository(BaseRepository[Plan]):
     model = Plan
 
     def _detail_options(self):
-        # waiting_min, assignment.ship.eta'ya bağlı -> ship'i de eager-load et (N+1 önlenir).
+        # Eager-load the relations needed for serialisation to avoid N+1 queries.
         return (
             selectinload(Plan.assignments).selectinload(Assignment.ship),
             selectinload(Plan.unassigned_entries),

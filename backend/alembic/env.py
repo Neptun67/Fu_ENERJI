@@ -4,10 +4,10 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
-from app.models import Base  # tüm modelleri import ederek metadata'yı doldurur
+from app.models import Base  # importing all models populates the metadata
 
 config = context.config
-# URL'i koda gömmeyip ayarlardan (env) alıyoruz.
+# Read the URL from settings (env) rather than hardcoding it.
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
 if config.config_file_name is not None:

@@ -7,8 +7,8 @@ class ShipBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=120)
     eta: datetime
     length_m: float = Field(..., gt=0, description="Metre")
-    draft_m: float = Field(..., gt=0, description="Su çekimi, metre")
-    handling_time_min: int = Field(..., gt=0, description="Elleçleme süresi, dakika")
+    draft_m: float = Field(..., gt=0, description="Draft in metres")
+    handling_time_min: int = Field(..., gt=0, description="Handling time in minutes")
 
 
 class ShipCreate(ShipBase):
@@ -16,7 +16,7 @@ class ShipCreate(ShipBase):
 
 
 class ShipUpdate(BaseModel):
-    """Kısmi güncelleme: tüm alanlar opsiyonel."""
+    """Partial update: every field is optional."""
     name: str | None = Field(None, min_length=1, max_length=120)
     eta: datetime | None = None
     length_m: float | None = Field(None, gt=0)

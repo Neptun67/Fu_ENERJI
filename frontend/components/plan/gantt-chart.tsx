@@ -29,7 +29,7 @@ export function GanttChart({
   if (plan.assignments.length === 0) {
     return (
       <p className="p-6 text-sm text-slate-500">
-        Bu planda atanmış gemi yok — atanamayanlar aşağıda listeleniyor.
+        No ships were assigned in this plan; the unassigned ones are listed below.
       </p>
     );
   }
@@ -78,7 +78,7 @@ export function GanttChart({
         </div>
       </div>
 
-      {/* satırlar */}
+      {/* rows */}
       <div className="border-t border-slate-200">
         {rows.map((berth) => {
           const items = byBerth.get(berth.id) ?? [];
@@ -98,17 +98,17 @@ export function GanttChart({
                   const bufWidth = pct(end + bufferMs) - pct(end);
                   return (
                     <div key={a.id}>
-                      {/* manevra tamponu */}
+                      {/* manoeuvring buffer */}
                       <div
                         className="absolute bottom-2 top-2 rounded-r bg-slate-200"
                         style={{ left: `${pct(end)}%`, width: `${bufWidth}%` }}
-                        title={`Manevra tamponu: ${plan.buffer_min} dk`}
+                        title={`Manoeuvring buffer: ${plan.buffer_min} min`}
                       />
                       {/* atama */}
                       <div
                         className="absolute bottom-2 top-2 flex items-center overflow-hidden rounded bg-teal-600 shadow-sm"
                         style={{ left: `${left}%`, width: `${width}%` }}
-                        title={`${shipName}\n${formatTime(a.start_time)} – ${formatTime(a.end_time)}\nBekleme: ${a.waiting_min} dk`}
+                        title={`${shipName}\n${formatTime(a.start_time)} – ${formatTime(a.end_time)}\nWaiting: ${a.waiting_min} min`}
                       >
                         <span className="truncate px-2 text-xs font-medium text-white">
                           {shipName}
@@ -123,15 +123,15 @@ export function GanttChart({
         })}
       </div>
 
-      {/* açıklama */}
+      {/* legend */}
       <div className="mt-3 flex items-center gap-4 px-1 text-xs text-slate-500">
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded bg-teal-600" /> Atama
+          <span className="h-3 w-3 rounded bg-teal-600" /> Assignment
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded bg-slate-200" /> Manevra tamponu
+          <span className="h-3 w-3 rounded bg-slate-200" /> Manoeuvring buffer
         </span>
-        <span className="ml-auto">Saatler UTC</span>
+        <span className="ml-auto">Times in UTC</span>
       </div>
     </div>
   );

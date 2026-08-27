@@ -6,7 +6,7 @@ from app.controllers import berths, plans, ships
 from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError
 
-app = FastAPI(title="Liman Yanaşma Planlama API")
+app = FastAPI(title="Port Berth Planning API")
 
 app.add_middleware(
     CORSMiddleware,

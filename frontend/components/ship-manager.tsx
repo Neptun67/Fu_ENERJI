@@ -43,7 +43,7 @@ export function ShipManager({ initialShips }: { initialShips: Ship[] }) {
       reset();
       startTransition(() => router.refresh());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Kaydedilemedi");
+      setError(e instanceof Error ? e.message : "Could not save");
     }
   }
 
@@ -66,7 +66,7 @@ export function ShipManager({ initialShips }: { initialShips: Ship[] }) {
       if (editingId === id) reset();
       startTransition(() => router.refresh());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Silinemedi");
+      setError(e instanceof Error ? e.message : "Could not delete");
     }
   }
 
@@ -83,22 +83,22 @@ export function ShipManager({ initialShips }: { initialShips: Ship[] }) {
         className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
       >
         <h2 className="mb-4 text-sm font-semibold text-slate-900">
-          {editingId == null ? "Yeni gemi" : "Gemiyi düzenle"}
+          {editingId == null ? "New ship" : "Edit ship"}
         </h2>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-          <Field label="Ad" value={form.name} onChange={set("name")} required />
+          <Field label="Name" value={form.name} onChange={set("name")} required />
           <Field label="ETA (UTC)" type="datetime-local" value={form.eta} onChange={set("eta")} required />
-          <Field label="Uzunluk (m)" type="number" step="0.1" min="0" value={form.length_m} onChange={set("length_m")} required />
-          <Field label="Su çekimi (m)" type="number" step="0.1" min="0" value={form.draft_m} onChange={set("draft_m")} required />
-          <Field label="Elleçleme (dk)" type="number" step="1" min="0" value={form.handling_time_min} onChange={set("handling_time_min")} required />
+          <Field label="Length (m)" type="number" step="0.1" min="0" value={form.length_m} onChange={set("length_m")} required />
+          <Field label="Draft (m)" type="number" step="0.1" min="0" value={form.draft_m} onChange={set("draft_m")} required />
+          <Field label="Handling (min)" type="number" step="1" min="0" value={form.handling_time_min} onChange={set("handling_time_min")} required />
         </div>
         <div className="mt-4 flex items-center gap-2">
           <Button type="submit" disabled={!canSubmit || pending}>
-            {editingId == null ? "Gemi ekle" : "Değişiklikleri kaydet"}
+            {editingId == null ? "Add ship" : "Save changes"}
           </Button>
           {editingId != null && (
             <Button type="button" variant="ghost" onClick={reset}>
-              Vazgeç
+              Cancel
             </Button>
           )}
         </div>
@@ -112,17 +112,17 @@ export function ShipManager({ initialShips }: { initialShips: Ship[] }) {
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         {initialShips.length === 0 ? (
           <p className="p-6 text-sm text-slate-500">
-            Henüz gemi yok. Yukarıdaki formdan ilk gemiyi ekleyin.
+            No ships yet. Add the first one using the form above.
           </p>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                <th className="px-4 py-3 font-medium">Ad</th>
+                <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">ETA</th>
-                <th className="px-4 py-3 font-medium text-right">Uzunluk</th>
-                <th className="px-4 py-3 font-medium text-right">Su çekimi</th>
-                <th className="px-4 py-3 font-medium text-right">Elleçleme</th>
+                <th className="px-4 py-3 font-medium text-right">Length</th>
+                <th className="px-4 py-3 font-medium text-right">Draft</th>
+                <th className="px-4 py-3 font-medium text-right">Handling</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -133,11 +133,11 @@ export function ShipManager({ initialShips }: { initialShips: Ship[] }) {
                   <td className="px-4 py-3 text-slate-600">{formatDateTime(ship.eta)}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-slate-600">{ship.length_m} m</td>
                   <td className="px-4 py-3 text-right tabular-nums text-slate-600">{ship.draft_m} m</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-slate-600">{ship.handling_time_min} dk</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-slate-600">{ship.handling_time_min} min</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" onClick={() => edit(ship)}>Düzenle</Button>
-                      <Button variant="danger" onClick={() => remove(ship.id)}>Sil</Button>
+                      <Button variant="ghost" onClick={() => edit(ship)}>Edit</Button>
+                      <Button variant="danger" onClick={() => remove(ship.id)}>Delete</Button>
                     </div>
                   </td>
                 </tr>

@@ -24,7 +24,7 @@ class UnassignedEntryRead(BaseModel):
     @computed_field  # type: ignore[misc]
     @property
     def reason_message(self) -> str:
-        """Kullanıcıya gösterilecek, insan-okunur neden metni."""
+        """Human-readable reason text shown to the user."""
         return self.reason.message
 
 
@@ -39,10 +39,11 @@ class PlanRead(BaseModel):
 
 
 class PlanGenerateRequest(BaseModel):
-    """Plan üretim isteği. buffer_min verilmezse ayarlardaki varsayılan (60 dk) kullanılır."""
-    # Üst sınır 1440 dk (24 saat): manevra tamponu bir unberthing + bir berthing
-    # süresini temsil eder; bir günü aşan değer veri girişi hatasıdır ve planı
-    # sessizce anlamsız hale getirir (bkz. ROADMAP sapma günlüğü).
+    """Plan generation request. If buffer_min is omitted, the configured default
+    of 60 minutes is used."""
+    # Upper bound 1440 min (24 h): the buffer represents one unberthing plus one
+    # berthing manoeuvre. A value beyond a day is a data-entry error and would
+    # silently produce a meaningless plan. See the ROADMAP change log.
     buffer_min: int | None = Field(
-        None, gt=0, le=1440, description="Manevra tamponu (dk), 1-1440 arası"
+        None, gt=0, le=1440, description="Manoeuvring buffer in minutes, 1-1440"
     )

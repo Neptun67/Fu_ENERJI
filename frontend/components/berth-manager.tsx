@@ -40,7 +40,7 @@ export function BerthManager({ initialBerths }: { initialBerths: Berth[] }) {
       reset();
       startTransition(() => router.refresh());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Kaydedilemedi");
+      setError(e instanceof Error ? e.message : "Could not save");
     }
   }
 
@@ -61,7 +61,7 @@ export function BerthManager({ initialBerths }: { initialBerths: Berth[] }) {
       if (editingId === id) reset();
       startTransition(() => router.refresh());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Silinemedi");
+      setError(e instanceof Error ? e.message : "Could not delete");
     }
   }
 
@@ -77,20 +77,20 @@ export function BerthManager({ initialBerths }: { initialBerths: Berth[] }) {
         className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
       >
         <h2 className="mb-4 text-sm font-semibold text-slate-900">
-          {editingId == null ? "Yeni rıhtım" : "Rıhtımı düzenle"}
+          {editingId == null ? "New berth" : "Edit berth"}
         </h2>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-          <Field label="Ad" value={form.name} onChange={set("name")} required />
-          <Field label="Uzunluk (m)" type="number" step="0.1" min="0" value={form.length_m} onChange={set("length_m")} required />
-          <Field label="Derinlik (m)" type="number" step="0.1" min="0" value={form.depth_m} onChange={set("depth_m")} required />
+          <Field label="Name" value={form.name} onChange={set("name")} required />
+          <Field label="Length (m)" type="number" step="0.1" min="0" value={form.length_m} onChange={set("length_m")} required />
+          <Field label="Depth (m)" type="number" step="0.1" min="0" value={form.depth_m} onChange={set("depth_m")} required />
         </div>
         <div className="mt-4 flex items-center gap-2">
           <Button type="submit" disabled={!canSubmit || pending}>
-            {editingId == null ? "Rıhtım ekle" : "Değişiklikleri kaydet"}
+            {editingId == null ? "Add berth" : "Save changes"}
           </Button>
           {editingId != null && (
             <Button type="button" variant="ghost" onClick={reset}>
-              Vazgeç
+              Cancel
             </Button>
           )}
         </div>
@@ -104,15 +104,15 @@ export function BerthManager({ initialBerths }: { initialBerths: Berth[] }) {
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         {initialBerths.length === 0 ? (
           <p className="p-6 text-sm text-slate-500">
-            Henüz rıhtım yok. Yukarıdaki formdan ilk rıhtımı ekleyin.
+            No berths yet. Add the first one using the form above.
           </p>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                <th className="px-4 py-3 font-medium">Ad</th>
-                <th className="px-4 py-3 font-medium text-right">Uzunluk</th>
-                <th className="px-4 py-3 font-medium text-right">Derinlik</th>
+                <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium text-right">Length</th>
+                <th className="px-4 py-3 font-medium text-right">Depth</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -124,8 +124,8 @@ export function BerthManager({ initialBerths }: { initialBerths: Berth[] }) {
                   <td className="px-4 py-3 text-right tabular-nums text-slate-600">{berth.depth_m} m</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" onClick={() => edit(berth)}>Düzenle</Button>
-                      <Button variant="danger" onClick={() => remove(berth.id)}>Sil</Button>
+                      <Button variant="ghost" onClick={() => edit(berth)}>Edit</Button>
+                      <Button variant="danger" onClick={() => remove(berth.id)}>Delete</Button>
                     </div>
                   </td>
                 </tr>

@@ -15,7 +15,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-    cache: "no-store", // operasyon aracı: her zaman güncel veri
+    cache: "no-store", // operations tool: always show current data
   });
   if (!res.ok) {
     let detail = res.statusText;
@@ -23,7 +23,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       const body = await res.json();
       detail = body.detail ?? detail;
     } catch {
-      /* gövde JSON değilse statusText kalır */
+      /* if the body is not JSON, keep statusText */
     }
     throw new ApiError(res.status, String(detail));
   }
