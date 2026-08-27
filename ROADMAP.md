@@ -196,6 +196,39 @@ Geliştirme sırasında plandan sapıldıkça buraya işlenecek. Format:
   başlatmadan önce `alembic upgrade head` çalıştırıyor. — **Neden:** Railway gibi platformlar
   DB URL'ini `postgres://` biçiminde verir ve env'i platformdan alırız; deploy'un elle
   müdahale gerektirmeden çalışması için.
+- `2026-08-27` — **Ne değişti:** Faz 0'da vaat edilen dört araçtan yalnızca **ruff**
+  (Python linter) eklendi; black, eslint ve prettier eklenmedi. Ayrıca Faz 0 ayrı bir adım
+  olarak yürütülmedi, Faz 1'e katıldı. — **Neden:** Bu iki sapma teslim öncesi denetimde
+  fark edildi; ROADMAP'te vaat edilip yapılmamışlardı.
+
+  **ruff:** Ekleme kararından önce ölçtüm. Varsayılan kurallarla 30 bulgu çıktı; incelendiğinde
+  17'si FastAPI'nin `Depends()` kullanımına takılan B008 yanlış pozitifi, 9'u SQLAlchemy'nin
+  `Mapped["Ship"]` yazımı (ilgili sınıflar yalnızca `TYPE_CHECKING` altında import edildiği
+  için tırnaklar **gerekli**; UP037'nin önerdiği düzeltme uygulanırsa mapper kırılır).
+  Geriye 4 gerçek bulgu kaldı: iki `raise ... from None` eksikliği ve iki belirsiz değişken
+  adı (`l`). Dördü de düzeltildi, `ruff.toml` yazıldı (yanlış pozitifler gerekçeleriyle
+  susturuldu) ve `ruff check` temiz geçiyor. Kural seti kod tabanının Türkçe olmasını da
+  hesaba katıyor: ruff `ı`/`ş`/`ğ` harflerini "belirsiz unicode" sayıp 344 uyarı ürettiği
+  için RUF001-003 kapatıldı.
+
+  **eslint:** Kurulmaya çalışıldı ancak proje OneDrive altında olduğu için `node_modules`
+  üzerinde dosya kilidi oluştu (`ENOTEMPTY`) ve kurulum tamamlanamadı. Bu bir ortam sorunu,
+  kod sorunu değil. Doğrulayamadığım bir yapılandırmayı repoya koymamayı tercih ettim;
+  yarım kurulum geri alındı. Not: `next build` zaten TypeScript tip denetimi yapıyor ve
+  derleme temiz geçiyor, dolayısıyla frontend denetimsiz değil.
+
+  **black / prettier:** Bilinçli olarak kapsam dışı bırakıldı. Formatter eklemek teslimden
+  hemen önce tüm kod tabanını yeniden biçimlendirir; bu, gözden geçirilmesi gereken büyük
+  ve anlamsız bir fark üretir. Linter (hata arar) bu aşamada değerli, formatter (biçim
+  dayatır) değil.
+
+- `2026-08-27` — **Ne değişti:** `core/database.py`'deki SQLite foreign-key PRAGMA
+  dalı kaldırıldı. — **Neden:** Proje hiçbir ortamda SQLite kullanmıyor: geliştirmede
+  Docker'da PostgreSQL, testlerde hiç veritabanı yok (planlayıcı saf olduğu için birim
+  testler DB'siz çalışıyor), üretimde Railway PostgreSQL. Kod `# pragma: no cover` ile
+  işaretliydi — hiç çalıştırılmadığının kendi itirafı. Kullanılmayan bir veritabanı için
+  savunma kodu taşımak, okuyanda "burada SQLite da destekleniyor" izlenimi bırakıyordu.
+
 - `2026-08-27` — **Ne değişti:** Planlayıcının öncelik kuralı FCFS'ten (varış sırası)
   **HRRN**'e (Highest Response Ratio Next) çevrildi; `plan()` "sırala + yerleştir"
   döngüsünden her adımda karar veren bir **dispatch** döngüsüne dönüştü. — **Neden:**

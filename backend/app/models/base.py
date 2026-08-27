@@ -6,7 +6,6 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 class Base(DeclarativeBase):
     """Tüm ORM modellerinin ortak taban sınıfı."""
-    pass
 
 
 class TimestampMixin:

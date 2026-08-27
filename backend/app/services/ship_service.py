@@ -47,4 +47,4 @@ class ShipService:
         except IntegrityError:
             # FK RESTRICT: gemi bir planda geçiyorsa silinemez.
             self.db.rollback()
-            raise ConflictError("Bu gemi bir planda kullanıldığı için silinemez")
+            raise ConflictError("Bu gemi bir planda kullanıldığı için silinemez") from None

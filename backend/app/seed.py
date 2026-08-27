@@ -61,11 +61,11 @@ def reset(session) -> None:
 def seed() -> None:
     with SessionLocal() as session:
         reset(session)
-        session.add_all([Berth(name=n, length_m=l, depth_m=d) for n, l, d in BERTHS])
+        session.add_all([Berth(name=n, length_m=uzn, depth_m=d) for n, uzn, d in BERTHS])
         session.add_all(
             [
-                Ship(name=n, eta=e, length_m=l, draft_m=dr, handling_time_min=h)
-                for n, e, l, dr, h in SHIPS
+                Ship(name=n, eta=e, length_m=uzn, draft_m=dr, handling_time_min=h)
+                for n, e, uzn, dr, h in SHIPS
             ]
         )
         session.commit()

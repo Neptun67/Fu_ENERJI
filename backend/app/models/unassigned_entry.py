@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Enum as SAEnum, ForeignKey, Integer
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 # Enum tek kaynaktan gelir: saf domain katmanı. Böylece model ve planlayıcı

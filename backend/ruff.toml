@@ -1,0 +1,22 @@
+# Backend linter yapılandırması.
+# Formatter (black/prettier) bilinçli olarak kapsam dışı — bkz. ROADMAP sapma günlüğü.
+
+line-length = 100
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "PIE", "RUF"]
+
+# SQLAlchemy modellerinde Mapped["Ship"] tırnakları GEREKLİDİR: ilgili sınıflar
+# yalnızca TYPE_CHECKING altında import edilir, çalışma zamanında isim yoktur.
+# UP037 bu tırnakları kaldırmayı önerir; uygulanırsa mapper yapılandırması kırılır.
+ignore = [
+    "UP037",   # SQLAlchemy Mapped["Ship"] tırnakları (yukarıdaki açıklama)
+    # Kod ve yorumlar bilinçli olarak Türkçedir; ruff 'ı', 'ş', 'ğ' gibi harfleri
+    # ASCII'ye benzedikleri için "belirsiz unicode" sayar. Bu bir yanlış pozitiftir.
+    "RUF001", "RUF002", "RUF003",
+]
+
+[lint.flake8-bugbear]
+# FastAPI'de Depends/Body/Query varsayılan argümanda çağrılır; bu framework'ün
+# tasarımıdır, B008 burada yanlış pozitiftir.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Body", "fastapi.Query"]

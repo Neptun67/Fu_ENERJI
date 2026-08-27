@@ -9,3 +9,6 @@ psycopg[binary]>=3.2
 # test
 pytest>=8.0
 httpx>=0.27
+
+# lint
+ruff>=0.6

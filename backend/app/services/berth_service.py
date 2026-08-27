@@ -45,4 +45,4 @@ class BerthService:
             self.db.commit()
         except IntegrityError:
             self.db.rollback()
-            raise ConflictError("Bu rıhtım bir planda kullanıldığı için silinemez")
+            raise ConflictError("Bu rıhtım bir planda kullanıldığı için silinemez") from None
