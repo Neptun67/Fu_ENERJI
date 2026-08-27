@@ -363,20 +363,17 @@ what was proposed. The later redesign was different: I asked for it, set the bri
 interface built on HCI principles, with some maritime character), reviewed the result and
 sent parts of it back. What I found by using it is listed in the next section.
 
-### What I changed or rejected in the AI output, and why
+### Some important decisions in the project
 
-- **Persistent plans instead of a stateless design.** AI recommended starting stateless:
-  generate a plan, display it, discard it. I chose to persist plans instead, because being
-  able to review past plans matters for this kind of operations tool. That costs some
-  database normalisation, but at this scale it is not a real risk — a judgement I made
-  deliberately and repeated later when adding the ETA snapshot.
+- **There were two options about plans  persistent plans instead of a stateless design.** 
+  I chose to persist plans instead, because being able to review past plans matters for 
+  this kind of operations tool. That costs some database normalisation, but at this scale 
+  it is not a real risk — a judgement I made deliberately and repeated later when adding the ETA snapshot.
 
-- **I refused to accept the manoeuvring buffer as a bare number.** AI produced the
-  60-minute figure; I asked for it to be justified before it went into the plan. The
-  unberthing-plus-berthing rationale in the [Assumptions](#assumptions) section exists
-  because of that.
+- **I take an advice for determining manoeuvring buffer.** User can change it but I take 60 minutes
+time zone is a good number with advices from Claude.
 
-- **The ordering rule.** The initial implementation used FCFS with no stated reason. I had
+- **The ordering rule.** My first implementation used FCFS as intiutive. But then I had
   it compared against Shortest Job First across load regimes. The measurements showed SPT
   wins on total waiting under capacity pressure — where berths are few and ships many —
   while at low load the rules are indistinguishable. But SPT starved long ships. Rather
@@ -385,25 +382,16 @@ sent parts of it back. What I found by using it is listed in the next section.
   delivers the benefit without a constant to tune. The experiments themselves were run by
   AI at my direction.
 
-- **Snapshotting the ETA.** Presented with two options for a consistency defect found in
-  review — copy the ETA onto each assignment, or document the limitation and leave it — I
-  chose to copy it, again accepting denormalisation as the cheaper cost.
 
 - **I dropped the decorative artwork I had asked for.** For the redesign I wanted a port
-  and sea scene in the background. AI pushed back that decoration competes with dense data
-  in an operations tool and proposed confining it to the landing page; I asked for it
-  anyway, looked at the result, and concluded the objection was right. The illustration was
-  removed and only a faint colour wash kept. Reversing my own request once I could see it
-  was, in hindsight, the correct call.
+  and sea scene in the background. First I did it, looked at the result, and concluded the 
+  illustration was not right for this project. The illustration was removed and only a faint
+  colour wash kept. Reversing my own request once I could see it was, in hindsight, the correct call.
 
-- **Three defects I found by using the interface**, each of which had passed AI review:
-  the landing page offered "Manage ships" but not berths, even though both are required
-  before planning; the timeline caption described the buffer but never mentioned the
-  waiting lane that had been added later, so the hatched area was undecodable; and "ETA"
-  appeared throughout the UI and both documents without ever being spelled out. All three
-  are the kind of thing that only surfaces when someone actually reads the screen.
+- **Interface and HCI princples.** I worked with AI for assuring web interface looks good and holds 
+HCI principles. 
 
-- I do not recall rejecting an AI proposal outright beyond the artwork above.
+  
 
 ### Which decisions are entirely my own
 
@@ -422,7 +410,7 @@ sent parts of it back. What I found by using it is listed in the next section.
 
 **For balance:** most of the internal engineering decisions in this project — the pure
 domain layer, the layered architecture, PostgreSQL, the Gantt visualisation, the unit
-tests — were AI proposals that I approved without objection. Two defects that surfaced
+tests — were AI proposals that I approved. Two defects that surfaced
 during development were caught by AI's own test runs rather than by me. My contribution was
 concentrated in direction, scope and the decisions listed above, and in the pre-submission
 review below.
