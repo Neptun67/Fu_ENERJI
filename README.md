@@ -365,15 +365,15 @@ sent parts of it back. What I found by using it is listed in the next section.
 
 ### Some important decisions in the project
 
-- **There were two options about plans  persistent plans instead of a stateless design.** 
-  I chose to persist plans instead, because being able to review past plans matters for 
-  this kind of operations tool. That costs some database normalisation, but at this scale 
+- **There were two options for plans: persistent, or stateless.**
+  I chose to persist them, because being able to review past plans matters for
+  this kind of operations tool. That costs some database normalisation, but at this scale
   it is not a real risk — a judgement I made deliberately and repeated later when adding the ETA snapshot.
 
-- **I take an advice for determining manoeuvring buffer.** User can change it but I take 60 minutes
-time zone is a good number with advices from Claude.
+- **I took advice on the manoeuvring buffer.** The user can change it, but I settled on
+  60 minutes as a sensible default, on Claude's advice.
 
-- **The ordering rule.** My first implementation used FCFS as intiutive. But then I had
+- **The ordering rule.** My first implementation used FCFS, as it seemed intuitive. But then I had
   it compared against Shortest Job First across load regimes. The measurements showed SPT
   wins on total waiting under capacity pressure — where berths are few and ships many —
   while at low load the rules are indistinguishable. But SPT starved long ships. Rather
@@ -382,16 +382,13 @@ time zone is a good number with advices from Claude.
   delivers the benefit without a constant to tune. The experiments themselves were run by
   AI at my direction.
 
-
 - **I dropped the decorative artwork I had asked for.** For the redesign I wanted a port
-  and sea scene in the background. First I did it, looked at the result, and concluded the 
+  and sea scene in the background. First I did it, looked at the result, and concluded the
   illustration was not right for this project. The illustration was removed and only a faint
   colour wash kept. Reversing my own request once I could see it was, in hindsight, the correct call.
 
-- **Interface and HCI princples.** I worked with AI for assuring web interface looks good and holds 
-HCI principles. 
-
-  
+- **Interface and HCI principles.** I worked with AI to make sure the web interface looks
+  good and holds to HCI principles.
 
 ### Which decisions are entirely my own
 
