@@ -190,6 +190,25 @@ Departures from the plan are recorded here as they happen. Format:
 
 - `YYYY-MM-DD` — **What changed:** … — **Why:** …
 
+- `2026-08-27` — **What changed:** the seed script now offers two scenarios, selected with
+  a flag: `python -m app.seed` loads a light day (11 ships) and `python -m app.seed --busy`
+  a congested one (27 ships). Both share the same quay and the same three unassignable
+  ships. — **Why:** the measurements showed that the choice of scheduling rule is invisible
+  below roughly one unit of load, and the original seed sat exactly there: six berths
+  absorbed eight ships with almost no queuing, so the timeline never showed the buffer
+  costing berth time or the priority rule doing anything. The busy scenario runs the quay at
+  roughly 85-90% utilisation, uses all six berths including the long-shallow and
+  short-deep ones, and makes the waiting lanes and buffer gaps legible.
+
+  **Worth stating plainly:** on the busy scenario specifically, FCFS produces a lower total
+  waiting time than HRRN (3640 min against 4080 min). That does not contradict the
+  measurement table above, which is an average over 20 random datasets per configuration —
+  a single hand-built instance can fall either way, which is precisely why the comparison
+  was not run on one dataset. This instance happens to be bottleneck-heavy: four ships fit
+  only Berth 1, and a queue on a single berth is the regime where HRRN's ratio has least
+  room to help. The scenario was **not** tuned to make the chosen rule look better; adjusting
+  demo data until it agrees with a claim would destroy the point of measuring at all.
+
 - `2026-08-27` — **What changed:** an upper bound was added to the manoeuvring buffer
   (`le=1440`, i.e. 24 hours) and the frontend input was aligned with the backend
   (`min="1" max="1440"`; it was previously `min="0"`, and entering 0 made the backend
