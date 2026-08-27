@@ -29,11 +29,18 @@ class BerthService:
         return berth
 
     def create_berth(self, payload: BerthCreate) -> Berth:
-        berth = Berth(**payload.model_dump())
-        self.repo.add(berth)
+        """Add a berth, flagging every existing plan as outdated.
+
+        Unlike an edit or a deletion this touches all of them: each was solved for
+        a quay that did not contain this berth, so none of them is still the answer
+        to the current problem.
+        """
+        obj = Berth(**payload.model_dump())
+        self.repo.add(obj)
+        self.plans.mark_all_stale(f"Berth {obj.name!r} was added")
         self.db.commit()
-        self.db.refresh(berth)
-        return berth
+        self.db.refresh(obj)
+        return obj
 
     def update_berth(self, berth_id: int, payload: BerthUpdate) -> Berth:
         """Apply a partial update, flagging plans if the change affects planning.

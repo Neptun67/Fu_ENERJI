@@ -215,9 +215,18 @@ it**. The foreign keys are `SET NULL` rather than `RESTRICT`: the assignment row
 with its names intact.
 
 A plan is marked **outdated** (`stale_at`, `stale_reason`) whenever the data it was built
-from moves on — a ship or berth being deleted, or edited in a way that affects planning.
-For a ship that means ETA, length, draft or handling time; for a berth, length or depth.
-Renaming does not count: yesterday's schedule is not wrong because a berth was relabelled.
+from moves on:
+
+| Change | Which plans are marked |
+|---|---|
+| A ship or berth is **added** | all of them — every plan was solved for a quay that did not contain it |
+| A ship or berth is **edited** in a way the planner reads | those that used it |
+| A ship or berth is **deleted** | those that used it |
+
+For a ship the planner reads ETA, length, draft and handling time; for a berth, length and
+depth. Renaming does not count: yesterday's schedule is not wrong because a berth was
+relabelled, and re-submitting the same value changes nothing because values are compared,
+not fields.
 Outdated plans are neither rewritten nor discarded. They appear under **Outdated** in the
 UI, still showing exactly what was decided, with a note saying what changed and when. A
 plan can also be discarded outright; it is a leaf aggregate, so its rows go with it and

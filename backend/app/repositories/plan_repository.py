@@ -38,6 +38,12 @@ class PlanRepository(BaseRepository[Plan]):
             plan.stale_reason = reason
         return len(plans)
 
+    def mark_all_stale(self, reason: str) -> int:
+        """Flag every plan. Adding a ship or a berth changes the problem itself,
+        not just one row of it: an existing plan was solved for a fleet and a quay
+        that did not include the new record, so none of them still describe it."""
+        return self._mark_stale(True, reason)
+
     def mark_stale_for_ship(self, ship_id: int, reason: str) -> int:
         return self._mark_stale(
             or_(

@@ -29,11 +29,18 @@ class ShipService:
         return ship
 
     def create_ship(self, payload: ShipCreate) -> Ship:
-        ship = Ship(**payload.model_dump())
-        self.repo.add(ship)
+        """Add a ship, flagging every existing plan as outdated.
+
+        Unlike an edit or a deletion this touches all of them: each was solved for
+        a quay that did not contain this ship, so none of them is still the answer
+        to the current problem.
+        """
+        obj = Ship(**payload.model_dump())
+        self.repo.add(obj)
+        self.plans.mark_all_stale(f"Ship {obj.name!r} was added")
         self.db.commit()
-        self.db.refresh(ship)
-        return ship
+        self.db.refresh(obj)
+        return obj
 
     def update_ship(self, ship_id: int, payload: ShipUpdate) -> Ship:
         """Apply a partial update, flagging plans if the change affects planning.
