@@ -1,70 +1,80 @@
-# Deploy Kılavuzu
+# Deployment guide
 
-Kurulum: **Backend + PostgreSQL → Railway**, **Frontend → Vercel**.
+Layout: **backend + PostgreSQL on Railway**, **frontend on Vercel**.
 
-> **Sıra önemli.** Backend ve frontend birbirinin URL'ine ihtiyaç duyar. Bu yüzden:
-> önce backend'i deploy et (URL'ini al) → sonra frontend'i o URL ile deploy et →
-> en son backend'in `CORS_ORIGINS`'ini frontend URL'i ile güncelle.
+> **Order matters.** The backend and the frontend each need the other's URL, so:
+> deploy the backend first and take its URL, then deploy the frontend with that URL,
+> and finally update the backend's `CORS_ORIGINS` with the frontend URL.
 
-Ön koşul: proje monorepo olarak GitHub'a push edilmiş olmalı (`backend/` ve `frontend/`).
+Prerequisite: the project must be pushed to GitHub as a monorepo (`backend/` and
+`frontend/` at the repository root).
 
 ---
 
 ## 1. Backend + PostgreSQL (Railway)
 
-1. [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo** → repoyu seç.
-2. Servisin **Settings → Root Directory** alanını `backend` yap. (Railway, `backend/Dockerfile`'ı
-   otomatik algılar; Dockerfile başlatmadan önce `alembic upgrade head` çalıştırır.)
-3. Projeye **New → Database → PostgreSQL** ekle. Ardından backend servisi →
-   **Variables → New Variable** ile bağlantıyı **elle** kur:
-   - Name: `DATABASE_URL`, Value: `${{Postgres.DATABASE_URL}}`
-   - Elle yazmak yerine **Add a Reference** düğmesinden `Postgres` → `DATABASE_URL` seç.
-   - `DATABASE_PUBLIC_URL` değil, özel ağdan giden `DATABASE_URL` kullanılır.
+1. [railway.app](https://railway.app) then **New Project** -> **Deploy from GitHub repo**
+   and pick the repository.
+2. Set the service's **Settings -> Root Directory** to `backend`. Railway detects
+   `backend/Dockerfile` automatically, and the Dockerfile runs `alembic upgrade head`
+   before starting the server.
+3. Add **New -> Database -> PostgreSQL** to the project. Then wire the connection up
+   **manually** on the backend service via **Variables -> New Variable**:
+   - Name `DATABASE_URL`, value `${{Postgres.DATABASE_URL}}`
+   - Rather than typing it, use the **Add a Reference** button and pick `Postgres` ->
+     `DATABASE_URL`.
+   - Use `DATABASE_URL`, which goes over the private network, not `DATABASE_PUBLIC_URL`.
 
-   > Railway Postgres'i aynı projeye eklemek değişkeni backend servisine **otomatik
-   > enjekte etmez**. Bu adım atlanırsa uygulama `config.py`'deki lokal varsayılana düşer
-   > ve açılışta `connection to server at "127.0.0.1", port 5432 failed` ile çöker.
-   - Bu URL `postgres://...` biçimindedir; uygulama bunu psycopg v3 sürücüsüne **otomatik**
-     çevirir (kod tarafında hallettik).
-4. Backend servisi → **Settings → Networking → Generate Domain**. Bir public URL alırsın:
-   `https://<isim>.up.railway.app`. **Bu URL'i not al.**
-5. Deploy loglarında migration'ın (`Running upgrade -> ... initial`) çalıştığını doğrula.
-6. `https://<isim>.up.railway.app/health` → `{"status":"ok"}` ve `/docs` (Swagger) açılmalı.
+   > Adding Postgres to the same Railway project does **not** inject the variable into the
+   > backend service automatically. Skip this step and the application falls back to the
+   > local default in `config.py`, then crashes at startup with
+   > `connection to server at "127.0.0.1", port 5432 failed`.
+   - The URL comes in `postgres://...` form; the application converts it to the psycopg v3
+     driver **automatically** (handled in code).
+4. Backend service -> **Settings -> Networking -> Generate Domain**. You get a public URL,
+   `https://<name>.up.railway.app`. **Note it down.**
+5. Confirm in the deploy logs that the migration ran (`Running upgrade -> ... initial`).
+6. `https://<name>.up.railway.app/health` should return `{"status":"ok"}`, and `/docs`
+   (Swagger) should open.
 
 ## 2. Frontend (Vercel)
 
-1. [vercel.com](https://vercel.com) → **Add New → Project** → aynı repoyu içe aktar.
-2. **Root Directory** olarak `frontend` seç. (Vercel Next.js'i otomatik algılar.)
-3. **Environment Variables** ekle:
-   - `NEXT_PUBLIC_API_URL = https://<isim>.up.railway.app/api`  *(sondaki `/api` önemli)*
-4. **Deploy**. Bir URL alırsın: `https://<uygulama>.vercel.app`. **Bu URL'i not al.**
+1. [vercel.com](https://vercel.com) then **Add New -> Project** and import the same
+   repository.
+2. Choose `frontend` as the **Root Directory**. Vercel detects Next.js automatically.
+3. Add an **Environment Variable**:
+   - `NEXT_PUBLIC_API_URL = https://<name>.up.railway.app/api` *(the trailing `/api`
+     matters)*
+4. **Deploy.** You get a URL, `https://<app>.vercel.app`. **Note it down too.**
 
-## 3. Backend CORS'unu güncelle
+## 3. Update the backend CORS setting
 
-1. Railway → backend servisi → **Variables** → yeni değişken:
-   - `CORS_ORIGINS = https://<uygulama>.vercel.app`
-2. Servis otomatik yeniden deploy olur. Artık tarayıcıdan gelen istekler CORS'a takılmaz.
+1. Railway -> backend service -> **Variables** -> new variable:
+   - `CORS_ORIGINS = https://<app>.vercel.app`
+2. The service redeploys automatically. Browser requests will now pass CORS.
 
-## 4. Demo verisi (opsiyonel)
+## 4. Demo data (optional)
 
-Canlı veritabanını örnek veriyle doldurmak için seed script'ini bir kez çalıştır:
+To fill the live database with sample data, run the seed script once:
 
-- **Railway CLI ile:** `railway run --service <backend> python -m app.seed`
-- **veya** Railway servis kabuğundan (Deployments → shell): `python -m app.seed`
+- **With the Railway CLI:** `railway run --service <backend> python -m app.seed`
+- **Or** from the Railway service shell (Deployments -> shell): `python -m app.seed`
 
-Bu, 6 rıhtım ve 11 gemi ekler; plan üretince 8 atama + 3 atanamayan (üç farklı neden) görürsün.
+This inserts 6 berths and 11 ships; generating a plan then yields 8 assignments and 3
+unassigned ships covering three different reasons.
 
 ---
 
-## Notlar
+## Notes
 
-- **Soğuk başlangıç:** Ücretsiz katmanda backend inaktif kalınca uykuya geçebilir; ilk
-  istek birkaç saniye gecikebilir. Sunumdan hemen önce `/health`'e bir istek atıp "uyandır".
-- **Ortam değişkenleri özeti:**
-  | Nerede | Değişken | Örnek |
+- **Cold start:** on a free tier the backend may sleep while idle, so the first request can
+  take a few seconds. Hit `/health` shortly before a demo to wake it up.
+- **Environment variables at a glance:**
+  | Where | Variable | Example |
   |---|---|---|
-  | Railway (backend) | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` *(referans olarak elle eklenir)* |
-  | Railway (backend) | `CORS_ORIGINS` | `https://uygulama.vercel.app` |
+  | Railway (backend) | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` *(added manually as a reference)* |
+  | Railway (backend) | `CORS_ORIGINS` | `https://app.vercel.app` |
   | Vercel (frontend) | `NEXT_PUBLIC_API_URL` | `https://backend.up.railway.app/api` |
-- **Alternatif (Render):** Backend için Render de kullanılabilir — aynı Dockerfile geçerli;
-  managed PostgreSQL ekleyip `DATABASE_URL`'i bağlarsın, start komutu Dockerfile'dan gelir.
+- **Alternative (Render):** Render also works for the backend — the same Dockerfile applies.
+  Add managed PostgreSQL, wire up `DATABASE_URL`, and the start command comes from the
+  Dockerfile.

@@ -1,295 +1,303 @@
-# ROADMAP — Liman Yanaşma Planlama Uygulaması
+# ROADMAP — Port Berth Planning Application
 
-Bu dosya, uygulamanın implementasyon planını içerir: işin hangi adımlara bölündüğü,
-adımların sırası ve birbirine bağımlılıkları, her adımın kapsamı (neyin dahil, neyin
-bilinçli olarak dışarıda bırakıldığı). Geliştirme sırasında plandan sapılırsa, en alttaki
-**Sapma Günlüğü** bölümüne "ne değişti / neden" notu düşülür.
-
----
-
-## 1. Genel Bakış
-
-Bir limanın operasyon ekibi için, gelen gemileri kurallara uygun şekilde rıhtımlara
-atayan ve toplam bekleme süresini makul ölçüde azaltan bir yanaşma planı **otomatik**
-üreten full-stack web uygulaması.
-
-**Seçilen teknoloji ve mimari kararları (özet):**
-
-- **Frontend:** Next.js (App Router). Listeleme gibi veri-ağırlıklı ekranlar Server
-  Component, form ve etkileşimli görselleştirme Client Component olacak.
-- **Backend:** FastAPI, katmanlı mimari — **Controller → Service → Repository**.
-- **Domain çekirdeği:** Çizelgeleme algoritması, altyapıdan (DB/HTTP/framework) tamamen
-  bağımsız, **saf bir `planner` modülü** olarak yazılır. Deterministik ve birim testlerle
-  test edilebilir olması hedeflenir.
-- **Veritabanı:** PostgreSQL (managed). Üretilen planlar **kalıcı** olarak saklanır
-  (geçmişe dönük inceleme gereksinimi), bu yüzden bir `Plan` aggregate'i kullanılır.
-- **Deploy:** Frontend → Vercel, Backend + Postgres → Railway (alternatif: Render).
-
-**Temel kurallar (algoritmanın uyacağı kısıtlar):**
-
-1. Bir rıhtımda aynı anda yalnızca bir gemi bulunur.
-2. Gemi uzunluğu ≤ rıhtım uzunluğu.
-3. Gemi su çekimi (draft) ≤ rıhtım derinliği.
-4. Gemi, varış zamanından (ETA) önce atanamaz.
-5. Aynı rıhtımdaki iki atama arasında bir **manevra tamponu** bulunur.
-
-**Optimizasyon hedefi:** `bekleme = başlangıç_zamanı − ETA`; plan, atanan gemilerin
-toplam beklemesini azaltacak şekilde üretilir. Optimal değil, makul/savunulabilir bir
-sezgisel (greedy) yaklaşım hedeflenir.
+This file holds the implementation plan: how the work was split into steps, the order of
+those steps and their dependencies, and the scope of each one (what is included and what
+is deliberately left out). Whenever development departed from the plan, a "what changed /
+why" entry was added to the **Change Log** at the bottom.
 
 ---
 
-## 2. Adım (Faz) Planı
+## 1. Overview
 
-Adımlar bağımlılık sırasına göre listelenmiştir. Her adımda kapsam (dahil/hariç),
-bağımlılık ve çıktı belirtilmiştir.
+A full-stack web application that **automatically** produces a berthing plan for a port's
+operations team: it assigns incoming ships to berths under a set of rules while reasonably
+reducing total waiting time.
 
-### Faz 0 — Proje iskeleti ve repo kurulumu
-- **Dahil:** Monorepo yapısı (`frontend/`, `backend/`), temel bağımlılıklar, linter/formatter
-  (ruff + black, eslint + prettier), `.gitignore`, `.env.example`, boş README ve bu ROADMAP.
-- **Hariç:** İş mantığı, veri modeli.
-- **Bağımlılık:** —
-- **Çıktı:** Çalışan, boş bir iskelet; `uvicorn` ve `next dev` ayağa kalkıyor.
+**Technology and architecture decisions (summary):**
 
-### Faz 1 — Veri modeli ve migration (backend)
-- **Dahil:** SQLAlchemy modelleri (`Ship`, `Berth`, `Plan`, `Assignment`, `UnassignedEntry`);
-  Alembic kurulumu ve ilk migration; Pydantic şemaları (request/response DTO'ları);
-  ayarların `pydantic-settings` ile env'den okunması (`DATABASE_URL`).
-- **Hariç:** Endpoint'ler, planlama mantığı.
-- **Bağımlılık:** Faz 0
-- **Çıktı:** `alembic upgrade head` ile Postgres'e uygulanabilen şema.
+- **Frontend:** Next.js (App Router). Data-heavy screens such as listings are Server
+  Components; forms and interactive visualisation are Client Components.
+- **Backend:** FastAPI with a layered architecture — **Controller → Service → Repository**.
+- **Domain core:** the scheduling algorithm is written as a **pure `planner` module**,
+  completely independent of infrastructure (DB / HTTP / framework), so that it stays
+  deterministic and unit-testable.
+- **Database:** PostgreSQL (managed). Generated plans are **persisted** (retrospective
+  review is a requirement), which is why a `Plan` aggregate is used.
+- **Deployment:** frontend to Vercel, backend and Postgres to Railway (alternative: Render).
 
-### Faz 2 — Gemi ve rıhtım CRUD'u (Repository → Service → Controller)
-- **Dahil:** Gemi ve rıhtımlar için katmanlı CRUD (ekleme, düzenleme, listeleme, silme);
-  girdi doğrulaması (negatif uzunluk/derinlik engeli vb.).
-- **Hariç:** Planlama.
-- **Bağımlılık:** Faz 1
-- **Çıktı:** `/api/ships` ve `/api/berths` uçları çalışıyor (Swagger üzerinden test edilebilir).
+**Core rules the algorithm must respect:**
 
-### Faz 3 — Planlama çekirdeği (saf `planner` domain modülü)
-- **Dahil:** Greedy algoritma — gemileri ETA'ya göre sırala; her gemi için fiziksel olarak
-  uygun (uzunluk + derinlik) rıhtımlar arasından, geminin **en erken başlayabileceği** rıhtımı
-  seç (`başlangıç = max(ETA, rıhtımdaki son işin bitişi + tampon)`); uygun rıhtım yoksa gemiyi
-  **nedeniyle** birlikte atanamayanlara ekle. Tampon süresi bir **parametre**. Sonuç: bellekte
-  bir `PlanResult { assignments, unassigned, total_waiting_min }`. Deterministik **birim testler**.
-- **Hariç:** DB, HTTP, framework bağımlılığı (bu modül hiçbirini import etmez).
-- **Bağımlılık:** Faz 1'in yalnızca düz domain tipleri; altyapıdan bağımsız olduğu için
-  aslında Faz 2 ile paralel yazılabilir.
-- **Çıktı:** Test edilmiş, izole, saf planlayıcı.
+1. Only one ship may occupy a berth at a time.
+2. Ship length ≤ berth length.
+3. Ship draft ≤ berth depth.
+4. A ship cannot be assigned before its arrival time (ETA).
+5. Consecutive assignments on the same berth are separated by a **manoeuvring buffer**.
 
-### Faz 4 — Plan üretim + kalıcılık servisi ve uçları
-- **Dahil:** `SchedulingService` — repository'lerden gemi/rıhtımları çeker, saf planlayıcıyı
-  çağırır, sonucu bir `Plan` (+ `Assignment` + `UnassignedEntry`) olarak **kaydeder**.
-  Uçlar: `POST /api/plans` (üret + kaydet), `GET /api/plans` (geçmiş), `GET /api/plans/{id}`.
-- **Hariç:** Gelişmiş optimizasyon, manuel düzenleme.
-- **Bağımlılık:** Faz 2 + Faz 3
-- **Çıktı:** Uçtan uca çalışan, kalıcı plan üretimi.
-
-### Faz 5 — Frontend: veri yönetimi ekranları
-- **Dahil:** `/ships` ve `/berths` sayfaları; listeleme Server Component, ekleme/düzenleme
-  formları Client Component; backend API entegrasyonu.
-- **Hariç:** Görselleştirme.
-- **Bağımlılık:** Faz 2
-- **Çıktı:** Gemi/rıhtım verisinin arayüzden yönetilebilmesi.
-
-### Faz 6 — Frontend: plan görselleştirme (ana deneyim)
-- **Dahil:** `/plan` sayfası; "Plan üret" aksiyonu; **Gantt/zaman-çizelgesi** görselleştirmesi
-  (satırlar = rıhtımlar, yatay eksen = zaman, barlar = atamalar, boşluklar = tampon);
-  **atanamayan gemiler paneli** (her biri nedeniyle); plan geçmişini görüntüleme.
-- **Hariç:** Sürükle-bırak manuel düzenleme.
-- **Bağımlılık:** Faz 4 + Faz 5
-- **Çıktı:** Operasyon çalışanının kullanacağı ana ekran.
-
-### Faz 7 — Örnek veri (seed)
-- **Dahil:** Gerçekçi bir gemi/rıhtım seti üreten seed script'i; içine **bilinçli olarak
-  atanamayacak** örnekler (hiçbir rıhtımdan uzun/derin gemi) konur ki "atanamayan + neden"
-  akışı demoda görünsün.
-- **Hariç:** —
-- **Bağımlılık:** Faz 1
-- **Çıktı:** Tek komutla dolu, gösterime hazır veri.
-
-### Faz 8 — Deploy
-- **Dahil:** Frontend → Vercel; Backend + Postgres → Railway. Yapılandırma: FastAPI
-  `CORSMiddleware`'e Vercel domain'i; `NEXT_PUBLIC_API_URL` (frontend) ve `DATABASE_URL`
-  (backend) env değişkenleri; release adımında `alembic upgrade head`.
-- **Hariç:** CI/CD boru hattı, ölçekleme.
-- **Bağımlılık:** Faz 4 (+ tercihen Faz 6)
-- **Çıktı:** Canlı, erişilebilir uygulama linki.
-
-### Faz 9 — Dokümantasyon ve sunum
-- **Dahil:** README (kurulum, proje yapısı, **Problem Yaklaşımı**, **AI Süreç Notu**);
-  kısa sunum.
-- **Bağımlılık:** Tüm fazlar.
-- **Çıktı:** Teslim edilebilir paket.
+**Optimisation objective:** `waiting = start_time − ETA`; the plan is produced so as to
+reduce the total waiting of assigned ships. Not optimal — a reasonable and defensible
+heuristic is the target.
 
 ---
 
-## 3. Bağımlılık Özeti
+## 2. Phase plan
+
+Phases are listed in dependency order. Each states its scope (in / out), dependencies and
+output.
+
+### Phase 0 — Project skeleton and repository setup
+- **In:** monorepo layout (`frontend/`, `backend/`), base dependencies, linter/formatter
+  (ruff + black, eslint + prettier), `.gitignore`, `.env.example`, an empty README and this
+  ROADMAP.
+- **Out:** business logic, data model.
+- **Depends on:** —
+- **Output:** a working empty skeleton; `uvicorn` and `next dev` both start.
+
+### Phase 1 — Data model and migrations (backend)
+- **In:** SQLAlchemy models (`Ship`, `Berth`, `Plan`, `Assignment`, `UnassignedEntry`);
+  Alembic setup and the first migration; Pydantic schemas (request/response DTOs); reading
+  settings from the environment via `pydantic-settings` (`DATABASE_URL`).
+- **Out:** endpoints, planning logic.
+- **Depends on:** Phase 0
+- **Output:** a schema applicable to Postgres with `alembic upgrade head`.
+
+### Phase 2 — Ship and berth CRUD (Repository → Service → Controller)
+- **In:** layered CRUD for ships and berths (create, edit, list, delete); input validation
+  (rejecting negative lengths and depths, and so on).
+- **Out:** planning.
+- **Depends on:** Phase 1
+- **Output:** working `/api/ships` and `/api/berths` endpoints, testable through Swagger.
+
+### Phase 3 — Planning core (pure `planner` domain module)
+- **In:** a greedy algorithm — order ships by ETA; for each ship, among the berths that fit
+  physically (length + draft), pick the one where it can **start earliest**
+  (`start = max(ETA, end of last job on that berth + buffer)`); if no berth fits, add the
+  ship to the unassigned list **with a reason**. The buffer is a **parameter**. Result: an
+  in-memory `PlanResult { assignments, unassigned, total_waiting_min }`. Deterministic
+  **unit tests**.
+- **Out:** any dependency on DB, HTTP or framework — this module imports none of them.
+- **Depends on:** only the plain domain types from Phase 1; being infrastructure-free, it
+  can in fact be written in parallel with Phase 2.
+- **Output:** a tested, isolated, pure planner.
+
+### Phase 4 — Plan generation and persistence service and endpoints
+- **In:** `SchedulingService` — loads ships and berths from the repositories, calls the pure
+  planner and **persists** the result as a `Plan` (plus `Assignment` and `UnassignedEntry`).
+  Endpoints: `POST /api/plans` (generate + persist), `GET /api/plans` (history),
+  `GET /api/plans/{id}`.
+- **Out:** advanced optimisation, manual editing.
+- **Depends on:** Phase 2 + Phase 3
+- **Output:** end-to-end, persisted plan generation.
+
+### Phase 5 — Frontend: data management screens
+- **In:** `/ships` and `/berths` pages; listings as Server Components, create/edit forms as
+  Client Components; backend API integration.
+- **Out:** visualisation.
+- **Depends on:** Phase 2
+- **Output:** ship and berth data manageable from the UI.
+
+### Phase 6 — Frontend: plan visualisation (the main experience)
+- **In:** the `/plan` page; a "Generate plan" action; a **Gantt / timeline** visualisation
+  (rows = berths, horizontal axis = time, bars = assignments, gaps = buffer); an
+  **unassigned ships panel** with a reason for each; viewing plan history.
+- **Out:** drag-and-drop manual editing.
+- **Depends on:** Phase 4 + Phase 5
+- **Output:** the main screen an operations employee will use.
+
+### Phase 7 — Sample data (seed)
+- **In:** a seed script producing a realistic set of ships and berths, including
+  **deliberately unassignable** examples (ships longer or deeper than any berth) so the
+  "unassigned + reason" flow is visible in a demo.
+- **Out:** —
+- **Depends on:** Phase 1
+- **Output:** demo-ready data in a single command.
+
+### Phase 8 — Deployment
+- **In:** frontend to Vercel; backend and Postgres to Railway. Configuration: the Vercel
+  domain in FastAPI's `CORSMiddleware`; the `NEXT_PUBLIC_API_URL` (frontend) and
+  `DATABASE_URL` (backend) environment variables; `alembic upgrade head` on release.
+- **Out:** a CI/CD pipeline, scaling.
+- **Depends on:** Phase 4 (and preferably Phase 6)
+- **Output:** a live, reachable application link.
+
+### Phase 9 — Documentation and presentation
+- **In:** README (setup, project structure, **Problem approach**, **AI process note**); a
+  short presentation.
+- **Depends on:** all phases.
+- **Output:** a deliverable package.
+
+---
+
+## 3. Dependency summary
 
 ```
-Faz 0
-  └─ Faz 1
-       ├─ Faz 2 ─────────────┐
-       ├─ Faz 3 (paralel) ───┤
-       │                     └─ Faz 4 ─┐
-       ├─ Faz 7 (seed)                 │
-       │                               ├─ Faz 6 ─ Faz 8 ─ Faz 9
-       └─ Faz 5 ──────────────────────┘
+Phase 0
+  +- Phase 1
+       +- Phase 2 ---------------+
+       +- Phase 3 (parallel) ----+
+       |                         +- Phase 4 --+
+       +- Phase 7 (seed)                      |
+       |                                      +- Phase 6 - Phase 8 - Phase 9
+       +- Phase 5 ---------------------------+
 ```
 
-Kritik yol: **0 → 1 → 2/3 → 4 → 6 → 8 → 9**. Faz 3 ve Faz 5, kritik yolun yanında
-paralel ilerletilebilir.
+Critical path: **0 → 1 → 2/3 → 4 → 6 → 8 → 9**. Phases 3 and 5 can proceed in parallel
+alongside the critical path.
 
 ---
 
-## 4. Zaman Planı (2 gün)
+## 4. Schedule (2 days)
 
-- **1. Gün:** Faz 0–4 (backend uçtan uca çalışır hale gelir) + Faz 7 (seed).
-- **2. Gün:** Faz 5–6 (frontend) → Faz 8 (deploy) → Faz 9 (dokümantasyon + sunum).
+- **Day 1:** phases 0–4 (backend working end to end) plus phase 7 (seed).
+- **Day 2:** phases 5–6 (frontend) → phase 8 (deployment) → phase 9 (documentation and
+  presentation).
 
-Zaman baskısı olursa öncelik: çalışan backend + algoritma + temel görselleştirme.
-Görselleştirmenin inceliği (renkler, animasyon) en son, "zaman kalırsa" işidir.
-
----
-
-## 5. Bilinçli Olarak Kapsam Dışı
-
-- **Authentication / yetkilendirme** — çalışmada istenmedi.
-- **Optimal çözüm (ILP / OR-Tools vb.)** — greedy sezgisel yeterli; tercih gerekçesi
-  README'nin "Problem Yaklaşımı" bölümünde açıklanacak.
-- **Gerçek zamanlı güncelleme / WebSocket.**
-- **Manuel sürükle-bırak plan düzenleme** — değerli bir "nice-to-have", yalnızca zaman
-  kalırsa.
-- **Çoklu liman / rol yönetimi.**
+Under time pressure the priority is: a working backend, the algorithm, and basic
+visualisation. Visual polish (colours, animation) is the last thing, only if time allows.
 
 ---
 
-## 6. Varsayımlar
+## 5. Deliberately out of scope
 
-- Zamanlar UTC olarak saklanır; elleçleme süresi ve manevra tamponu **dakika** cinsindendir.
-- **Manevra tamponu** sabit **60 dakika** alınır. Gerekçe: tampon, aynı rıhtımda ardışık iki
-  gemi arasında bir **unberthing + bir berthing** manevrasının toplamını temsil eder;
-  römorkör destekli tek bir manevra ~30 dk mertebesinde olduğundan (~30 + ~30) 60 dk makul bir
-  tabandır. `handling_time`, geminin rıhtımı işgal ettiği (kargo) süredir; manevralar bunun
-  dışında, tampona düşer. Değer **sabit değil parametre** olarak tutulur; asıl amaç
-  güvenlik/rıhtım-kullanımı ödünleşimini tek bir ayarla yönetilebilir kılmaktır. İleride
-  gemi boyutuna (LOA) veya tonaja (GT) bağlı bir fonksiyona dönüştürülebilir.
-- Bir gemi yalnızca **fiziksel** nedenlerle (yeterli uzunlukta/derinlikte rıhtım yok)
-  atanamaz olur; zaman kısıtı gemiyi atanamaz yapmaz, yalnızca başlangıcını geciktirir.
-- Bir plan üretimi, o andaki tüm gemi ve rıhtım verisinin anlık görüntüsüyle çalışır.
+- **Authentication / authorisation** — not requested in the brief.
+- **An optimal solution (ILP, OR-Tools and similar)** — a greedy heuristic is sufficient;
+  the rationale is explained in the README's "Problem approach" section.
+- **Real-time updates / WebSockets.**
+- **Manual drag-and-drop plan editing** — a worthwhile nice-to-have, only if time allows.
+- **Multiple ports / role management.**
 
 ---
 
-## 7. Sapma Günlüğü (Change Log)
+## 6. Assumptions
 
-Geliştirme sırasında plandan sapıldıkça buraya işlenecek. Format:
+- Times are stored in UTC; handling time and the manoeuvring buffer are in **minutes**.
+- The **manoeuvring buffer** is taken as a fixed **60 minutes**. Rationale: the buffer
+  represents one **unberthing plus one berthing** manoeuvre between consecutive ships on the
+  same berth; since a single tug-assisted manoeuvre is on the order of 30 minutes, roughly
+  30 + 30 makes 60 a reasonable floor. `handling_time` is the time a ship occupies the berth
+  for cargo work; manoeuvres sit outside it, in the buffer. The value is kept as a
+  **parameter rather than a constant**: the point is to make the safety versus
+  berth-utilisation trade-off adjustable through one setting. It could later become a
+  function of vessel size (LOA) or tonnage (GT).
+- A ship becomes unassignable only for **physical** reasons (no berth long or deep enough);
+  a time constraint never makes a ship unassignable, it only delays its start.
+- Each plan run works on a snapshot of all ship and berth data at that moment.
 
-- `YYYY-MM-DD` — **Ne değişti:** … — **Neden:** …
+---
 
-- `2026-08-26` — **Ne değişti:** Atanamama nedenlerine üçüncü bir değer eklendi:
-  `NO_SUITABLE_BERTH`. — **Neden:** İlk tasarımda yalnızca "uzunluk" ve "derinlik"
-  nedenleri vardı; ancak bir gemi, uzunluğu karşılayan bir rıhtım ve derinliği karşılayan
-  *başka* bir rıhtım bulunmasına rağmen ikisini *birlikte* karşılayan tek bir rıhtım
-  bulamayabilir. Bu bileşik durumu dürüstçe raporlamak için ayrı bir neden gerekti.
-- `2026-08-26` — **Ne değişti:** Config'e `DATABASE_URL` normalizasyonu (`postgres://` →
-  `postgresql+psycopg://`) ve virgülle ayrılmış `CORS_ORIGINS` desteği eklendi; Dockerfile
-  başlatmadan önce `alembic upgrade head` çalıştırıyor. — **Neden:** Railway gibi platformlar
-  DB URL'ini `postgres://` biçiminde verir ve env'i platformdan alırız; deploy'un elle
-  müdahale gerektirmeden çalışması için.
-- `2026-08-27` — **Ne değişti:** Manevra tamponuna üst sınır eklendi (`le=1440`, yani
-  24 saat) ve frontend girdisi backend ile hizalandı (`min="1" max="1440"`; önceden
-  `min="0"` idi ve 0 girildiğinde backend 422 dönüyordu). — **Neden:** Canlı ortamda
-  denerken tampon alanına yanlışlıkla 9000 (≈6.25 gün) girildi. Backend'de yalnızca
-  `gt=0` kısıtı olduğu için değer sessizce kabul edildi ve tamamen anlamsız ama
-  "geçerli" görünen bir plan üretildi (toplam bekleme 27225 dk). Bir operasyon aracında
-  fiziksel olarak imkânsız bir girdinin uyarısız kabul edilmesi savunulabilir değil;
-  tampon bir unberthing + bir berthing manevrasını temsil eder, bir günü aşan değer
-  veri giriş hatasıdır.
+## 7. Change Log
 
-  **Not:** Doğrulama pydantic şema düzeyinde bildirimsel olduğu için elle test edildi
-  (9000/1441/0/−5 → 422; 1440/60 → 201). Projede API katmanı için otomatik test altyapısı
-  yok; birim testler yalnızca saf planlayıcıyı kapsıyor.
+Departures from the plan are recorded here as they happen. Format:
 
-- `2026-08-27` — **Ne değişti:** Faz 0'da vaat edilen dört araçtan yalnızca **ruff**
-  (Python linter) eklendi; black, eslint ve prettier eklenmedi. Ayrıca Faz 0 ayrı bir adım
-  olarak yürütülmedi, Faz 1'e katıldı. — **Neden:** Bu iki sapma teslim öncesi denetimde
-  fark edildi; ROADMAP'te vaat edilip yapılmamışlardı.
+- `YYYY-MM-DD` — **What changed:** … — **Why:** …
 
-  **ruff:** Ekleme kararından önce ölçtüm. Varsayılan kurallarla 30 bulgu çıktı; incelendiğinde
-  17'si FastAPI'nin `Depends()` kullanımına takılan B008 yanlış pozitifi, 9'u SQLAlchemy'nin
-  `Mapped["Ship"]` yazımı (ilgili sınıflar yalnızca `TYPE_CHECKING` altında import edildiği
-  için tırnaklar **gerekli**; UP037'nin önerdiği düzeltme uygulanırsa mapper kırılır).
-  Geriye 4 gerçek bulgu kaldı: iki `raise ... from None` eksikliği ve iki belirsiz değişken
-  adı (`l`). Dördü de düzeltildi, `ruff.toml` yazıldı (yanlış pozitifler gerekçeleriyle
-  susturuldu) ve `ruff check` temiz geçiyor. Kural seti kod tabanının Türkçe olmasını da
-  hesaba katıyor: ruff `ı`/`ş`/`ğ` harflerini "belirsiz unicode" sayıp 344 uyarı ürettiği
-  için RUF001-003 kapatıldı.
+- `2026-08-27` — **What changed:** an upper bound was added to the manoeuvring buffer
+  (`le=1440`, i.e. 24 hours) and the frontend input was aligned with the backend
+  (`min="1" max="1440"`; it was previously `min="0"`, and entering 0 made the backend
+  return 422). — **Why:** while testing against the live environment, 9000 (about 6.25 days)
+  was entered into the buffer field by mistake. Because the backend only enforced `gt=0`,
+  the value was silently accepted and produced a completely meaningless yet valid-looking
+  plan (total waiting 27,225 min). Accepting a physically impossible input without warning
+  is indefensible in an operations tool; the buffer represents one unberthing plus one
+  berthing manoeuvre, so anything beyond a day is a data-entry error.
 
-  **eslint:** Kurulmaya çalışıldı ancak proje OneDrive altında olduğu için `node_modules`
-  üzerinde dosya kilidi oluştu (`ENOTEMPTY`) ve kurulum tamamlanamadı. Bu bir ortam sorunu,
-  kod sorunu değil. Doğrulayamadığım bir yapılandırmayı repoya koymamayı tercih ettim;
-  yarım kurulum geri alındı. Not: `next build` zaten TypeScript tip denetimi yapıyor ve
-  derleme temiz geçiyor, dolayısıyla frontend denetimsiz değil.
+  **Note:** the validation is declarative at the pydantic schema level, so it was verified
+  manually (9000/1441/0/-5 gave 422; 1440/60 gave 201). The project has no automated test
+  infrastructure for the API layer; the unit tests cover only the pure planner.
 
-  **black / prettier:** Bilinçli olarak kapsam dışı bırakıldı. Formatter eklemek teslimden
-  hemen önce tüm kod tabanını yeniden biçimlendirir; bu, gözden geçirilmesi gereken büyük
-  ve anlamsız bir fark üretir. Linter (hata arar) bu aşamada değerli, formatter (biçim
-  dayatır) değil.
+- `2026-08-27` — **What changed:** of the four tools promised in phase 0, only **ruff**
+  (the Python linter) was added; black, eslint and prettier were not. Phase 0 was also never
+  run as a separate step, being folded into phase 1. — **Why:** both departures were noticed
+  during the pre-submission review, having been promised in the ROADMAP but never carried
+  out.
 
-- `2026-08-27` — **Ne değişti:** `core/database.py`'deki SQLite foreign-key PRAGMA
-  dalı kaldırıldı. — **Neden:** Proje hiçbir ortamda SQLite kullanmıyor: geliştirmede
-  Docker'da PostgreSQL, testlerde hiç veritabanı yok (planlayıcı saf olduğu için birim
-  testler DB'siz çalışıyor), üretimde Railway PostgreSQL. Kod `# pragma: no cover` ile
-  işaretliydi — hiç çalıştırılmadığının kendi itirafı. Kullanılmayan bir veritabanı için
-  savunma kodu taşımak, okuyanda "burada SQLite da destekleniyor" izlenimi bırakıyordu.
+  **ruff:** measured before deciding to adopt it. With the default rules it reported 30
+  findings; on inspection 17 were B008 false positives triggered by FastAPI's Depends(),
+  and 9 concerned SQLAlchemy's Mapped["Ship"] form (the quotes are **required**, since those
+  classes are imported only under TYPE_CHECKING; applying UP037's suggested fix breaks
+  mapper configuration). That left 4 genuine findings: two missing "raise ... from None"
+  clauses and two ambiguous variable names. All four were fixed, a `ruff.toml` was written
+  (silencing the false positives with stated reasons) and `ruff check` now passes clean.
 
-- `2026-08-27` — **Ne değişti:** Planlayıcının öncelik kuralı FCFS'ten (varış sırası)
-  **HRRN**'e (Highest Response Ratio Next) çevrildi; `plan()` "sırala + yerleştir"
-  döngüsünden her adımda karar veren bir **dispatch** döngüsüne dönüştü. — **Neden:**
-  ROADMAP'te sıralama kararı gerekçelendirilmemişti; teslim öncesi bunu ölçmeye karar
-  verdim. Her yapılandırma için 20 rastgele veri seti üretip karşılaştırdım
-  (yük = elleçleme talebi / (rıhtım × varış penceresi)):
+  **eslint:** installation was attempted but the project lives under OneDrive, which held
+  file locks on `node_modules` (ENOTEMPTY) and the install never completed. That is an
+  environment problem rather than a code problem. Rather than commit a configuration that
+  could not be verified, the partial install was reverted. Note that `next build` already
+  type-checks the frontend and compiles cleanly, so the frontend is not unchecked.
 
-  | Kural | Toplam bekleme kazancı | En kötü bekleme bedeli | Parametre |
+  **black / prettier:** deliberately left out of scope. Adding a formatter immediately
+  before submission would reformat the entire codebase and produce a large, meaningless
+  diff to review. A linter, which finds errors, is valuable at this stage; a formatter,
+  which enforces style, is not.
+
+- `2026-08-27` — **What changed:** the SQLite foreign-key PRAGMA branch was removed from
+  `core/database.py`. — **Why:** the project uses SQLite in no environment at all:
+  PostgreSQL in Docker for development, no database whatsoever in the tests (the planner is
+  pure, so the unit tests need none), and Railway PostgreSQL in production. The code was
+  marked `# pragma: no cover`, its own admission that it never runs. Carrying defensive code
+  for an unused database left readers with the impression that SQLite was supported.
+
+- `2026-08-27` — **What changed:** the planner's priority rule was switched from FCFS
+  (arrival order) to **HRRN** (Highest Response Ratio Next), and `plan()` became a
+  **dispatch** loop that decides at every step instead of a sort-then-place loop. —
+  **Why:** the ordering decision carried no justification in the ROADMAP, so it was measured
+  before submission. For each configuration 20 random datasets were generated and compared
+  (load = handling demand divided by berths times arrival window):
+
+  | Rule | Total waiting gain | Worst-case waiting cost | Parameter |
   |---|---:|---:|---|
-  | SPT (aging yok) | +16.5% | +9 … +70% | yok |
-  | Aging α=0.25 | +12% | +0.6 … +1.4% | α |
-  | Aging α=0.5 | +7–8% | −1.4 … −1.9% | α |
-  | **HRRN** | **+12–14%** | **+2.6 … +9.5%** | **yok** |
+  | SPT (no aging) | +16.5% | +9 to +70% | none |
+  | Aging a=0.25 | +12% | +0.6 to +1.4% | a |
+  | Aging a=0.5 | +7 to 8% | -1.4 to -1.9% | a |
+  | **HRRN** | **+12 to 14%** | **+2.6 to +9.5%** | **none** |
 
-  Bulgular: (1) düşük yükte (ör. 6 rıhtım / 8 gemi — seed verimizin bulunduğu nokta)
-  kurallar arasında ölçülebilir fark yok; (2) düz SPT toplam beklemeyi azaltıyor ama uzun
-  gemileri açlığa itiyor; (3) aging bu bedeli büyük ölçüde kaldırıyor. HRRN'i seçtim çünkü
-  aging'in faydasını **ayarlanacak bir sabit olmadan** veriyor: α'nın adaleti koruyan
-  değeri yük rejimine göre 0.25–0.5 arasında kayıyor ve α'nın fiziksel bir karşılığı yok;
-  elimizde gerekçelendirilmesi gereken bir sabit (60 dk tampon) zaten var, ikincisini
-  eklemek istemedim. HRRN oranı geminin kendi elleçleme süresine göre normalize ettiği
-  için kendini yüke uyarlıyor.
+  Findings: (1) at low load, for example 6 berths and 8 ships where our seed data sits,
+  there is no measurable difference between the rules; (2) plain SPT reduces total waiting
+  but starves long ships; (3) aging removes most of that cost. HRRN was chosen because it
+  delivers aging's benefit **without a constant to tune**: the value of `a` that preserves
+  fairness shifts between 0.25 and 0.5 depending on the load regime and has no physical
+  meaning, and there is already one constant requiring justification (the 60-minute buffer)
+  so a second was not wanted. HRRN normalises the ratio against the ship's own handling
+  time, so it adapts to load by itself.
 
-  **Bilinen sınır:** HRRN açlığı sınırlar, tamamen kaldırmaz — aynı süre beklemiş kısa
-  gemiler oranı daha hızlı büyüttüğü için uzun gemiden önce hizmet alabilir. Ölçümdeki
-  +2.6…+9.5% en kötü bekleme bedeli bunun karşılığı. `test_hrrn_rescues_a_long_ship_from_starvation`
-  bu davranışı sabitliyor (aynı test düz SPT ile başarısız oluyor).
+  **Known limitation:** HRRN bounds starvation, it does not eliminate it. Short ships that
+  have waited the same amount of time grow their ratio faster and may be served before a
+  long one; the +2.6 to +9.5% worst-case cost in the table is the price of that.
+  `test_hrrn_rescues_a_long_ship_from_starvation` pins the behaviour, and the same test
+  fails under plain SPT.
 
-  **Maliyet:** değişiklik `domain/planner.py` dışına taşmadı (+47/−18 satır); servis, şema,
-  API ve frontend'e dokunulmadı. Mevcut 12 testin hiçbiri kırılmadı; yalnızca
-  `test_greedy_orders_by_eta` adı yanıltıcı hâle geldiği için
-  `test_ship_cannot_start_before_its_eta` olarak yeniden adlandırıldı. Saf domain
-  katmanı kararının somut getirisi bu.
+  **Cost:** the change never left `domain/planner.py` (+47/-18 lines); services, schemas,
+  the API and the frontend were untouched. None of the existing 12 tests broke; only
+  `test_greedy_orders_by_eta` was renamed to `test_ship_cannot_start_before_its_eta`,
+  because its name had become misleading. This is the concrete payoff of the pure domain
+  layer decision.
 
-- `2026-08-27` — **Ne değişti:** `Assignment`'a `eta` sütunu eklendi; atamanın beklemesi
-  artık canlı `Ship.eta` yerine planla birlikte saklanan bu kopyadan hesaplanıyor. Bekleme
-  kuralı (`bekleme = başlangıç − ETA`) tek kaynağa indirildi: `domain/types.waiting_minutes`;
-  ORM modeli kuralı yeniden yazmak yerine bu fonksiyonu çağırıyor. — **Neden:** Teslim öncesi
-  yaptığım kod denetiminde, kuralın hem saf domain'de hem `models/assignment.py` içinde ayrı
-  ayrı yazıldığını ve ORM'deki sürümün canlı gemi kaydını okuduğunu fark ettim. Sonuç olarak
-  bir plan üretildikten sonra geminin ETA'sı düzenlenirse, kayıtlı `Plan.total_waiting_min`
-  ile satır bazlı beklemeler çelişiyordu. `Plan` zaten "üretildiği andaki kayıt" olarak
-  tasarlandığı ve `buffer_min` aynı mantıkla kopyalandığı için, ETA'yı kopyalamamak bu
-  tasarımla çelişiyordu. Denormalizasyonu bilinçli olarak kabul ettim: bu ölçekte maliyeti
-  yok, karşılığında geçmiş planlar gerçekten değişmez oluyor. Mevcut satırlar migration
-  içinde gemilerin ETA'sından geri dolduruldu.
+- `2026-08-27` — **What changed:** an `eta` column was added to `Assignment`; an
+  assignment's waiting time is now computed from that stored copy rather than from the live
+  `Ship.eta`. The waiting rule (waiting = start minus ETA) was reduced to a single source,
+  `domain/types.waiting_minutes`, which the ORM model now calls instead of re-implementing.
+  — **Why:** during the pre-submission code review it turned out the rule was written
+  separately in both the pure domain and `models/assignment.py`, and that the ORM version
+  read the live ship record. As a result, editing a ship's ETA after a plan had been
+  generated made the stored `Plan.total_waiting_min` contradict the per-row waiting values.
+  Since `Plan` was already designed as a record of the moment it was generated, and
+  `buffer_min` was already copied on the same logic, not copying the ETA contradicted that
+  design. The denormalisation was accepted deliberately: at this scale it costs nothing, and
+  in exchange historical plans genuinely stop changing. Existing rows were backfilled from
+  the ships' ETAs inside the migration.
 
-- `2026-08-26` — **Ne değişti:** `UnassignedReason` enum'u `app/models` yerine saf
-  `app/domain/types` içine taşındı. — **Neden:** Planlayıcı çekirdeğinin altyapıdan
-  (SQLAlchemy) bağımsız kalması için; model artık enum'u domain'den import ediyor (tek kaynak).
+- `2026-08-26` — **What changed:** a third value was added to the non-assignment reasons,
+  `NO_SUITABLE_BERTH`. — **Why:** the initial design had only length and depth reasons.
+  However, a ship may find a berth that satisfies its length and *another* that satisfies
+  its draft, yet no single berth satisfying both. Reporting that combined case honestly
+  required its own reason.
+
+- `2026-08-26` — **What changed:** `DATABASE_URL` normalisation (`postgres://` to
+  `postgresql+psycopg://`) and comma-separated `CORS_ORIGINS` support were added to the
+  config; the Dockerfile runs `alembic upgrade head` before starting. — **Why:** platforms
+  such as Railway hand out the DB URL in `postgres://` form and supply the environment
+  themselves, so that deployment works without manual intervention.
+
+- `2026-08-26` — **What changed:** the `UnassignedReason` enum was moved out of `app/models`
+  into the pure `app/domain/types`. — **Why:** to keep the planner core independent of
+  infrastructure (SQLAlchemy); the model now imports the enum from the domain, giving it a
+  single source.

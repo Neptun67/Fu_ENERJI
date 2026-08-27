@@ -1,11 +1,11 @@
-# --- OS / editör ---
+# --- OS / editor ---
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
 *.swp
 
-# --- ortam sırları (asla commit'lenmez) ---
+# --- environment secrets (never committed) ---
 .env
 .env.local
 .env.*.local
