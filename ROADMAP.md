@@ -196,6 +196,20 @@ Geliştirme sırasında plandan sapıldıkça buraya işlenecek. Format:
   başlatmadan önce `alembic upgrade head` çalıştırıyor. — **Neden:** Railway gibi platformlar
   DB URL'ini `postgres://` biçiminde verir ve env'i platformdan alırız; deploy'un elle
   müdahale gerektirmeden çalışması için.
+- `2026-08-27` — **Ne değişti:** Manevra tamponuna üst sınır eklendi (`le=1440`, yani
+  24 saat) ve frontend girdisi backend ile hizalandı (`min="1" max="1440"`; önceden
+  `min="0"` idi ve 0 girildiğinde backend 422 dönüyordu). — **Neden:** Canlı ortamda
+  denerken tampon alanına yanlışlıkla 9000 (≈6.25 gün) girildi. Backend'de yalnızca
+  `gt=0` kısıtı olduğu için değer sessizce kabul edildi ve tamamen anlamsız ama
+  "geçerli" görünen bir plan üretildi (toplam bekleme 27225 dk). Bir operasyon aracında
+  fiziksel olarak imkânsız bir girdinin uyarısız kabul edilmesi savunulabilir değil;
+  tampon bir unberthing + bir berthing manevrasını temsil eder, bir günü aşan değer
+  veri giriş hatasıdır.
+
+  **Not:** Doğrulama pydantic şema düzeyinde bildirimsel olduğu için elle test edildi
+  (9000/1441/0/−5 → 422; 1440/60 → 201). Projede API katmanı için otomatik test altyapısı
+  yok; birim testler yalnızca saf planlayıcıyı kapsıyor.
+
 - `2026-08-27` — **Ne değişti:** Faz 0'da vaat edilen dört araçtan yalnızca **ruff**
   (Python linter) eklendi; black, eslint ve prettier eklenmedi. Ayrıca Faz 0 ayrı bir adım
   olarak yürütülmedi, Faz 1'e katıldı. — **Neden:** Bu iki sapma teslim öncesi denetimde

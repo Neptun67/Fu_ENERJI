@@ -40,4 +40,9 @@ class PlanRead(BaseModel):
 
 class PlanGenerateRequest(BaseModel):
     """Plan üretim isteği. buffer_min verilmezse ayarlardaki varsayılan (60 dk) kullanılır."""
-    buffer_min: int | None = Field(None, gt=0, description="Manevra tamponu (dk)")
+    # Üst sınır 1440 dk (24 saat): manevra tamponu bir unberthing + bir berthing
+    # süresini temsil eder; bir günü aşan değer veri girişi hatasıdır ve planı
+    # sessizce anlamsız hale getirir (bkz. ROADMAP sapma günlüğü).
+    buffer_min: int | None = Field(
+        None, gt=0, le=1440, description="Manevra tamponu (dk), 1-1440 arası"
+    )

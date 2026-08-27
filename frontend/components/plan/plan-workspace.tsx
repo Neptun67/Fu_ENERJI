@@ -64,7 +64,8 @@ export function PlanWorkspace({
           <span className="font-medium text-slate-600">Manevra tamponu (dk)</span>
           <input
             type="number"
-            min="0"
+            min="1"
+            max="1440"
             step="1"
             placeholder="60"
             value={buffer}
