@@ -44,6 +44,11 @@ export default function HomePage() {
           physical constraint and keeps total waiting time down. Ships that cannot be
           berthed are listed with the reason.
         </p>
+        {/*
+          One primary action, then the two data screens as equal-weight
+          secondaries. Ships and berths are peers in the model, so surfacing one
+          without the other would be arbitrary.
+        */}
         <div className="mt-7 flex flex-wrap items-center gap-3">
           <Link
             href="/plan"
@@ -56,6 +61,12 @@ export default function HomePage() {
             className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-sea-800 transition-colors hover:bg-sea-50"
           >
             Manage ships
+          </Link>
+          <Link
+            href="/berths"
+            className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-sea-800 transition-colors hover:bg-sea-50"
+          >
+            Manage berths
           </Link>
         </div>
       </section>
