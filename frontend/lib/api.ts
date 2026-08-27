@@ -49,7 +49,7 @@ export const updateBerth = (id: number, data: Partial<BerthInput>) =>
 export const deleteBerth = (id: number) =>
   request<void>(`/berths/${id}`, { method: "DELETE" });
 
-// --- plans (Faz 6) ---
+// --- plans ---
 export const listPlans = () => request<Plan[]>("/plans");
 export const getPlan = (id: number) => request<Plan>(`/plans/${id}`);
 export const generatePlan = (bufferMin?: number) =>
@@ -57,3 +57,5 @@ export const generatePlan = (bufferMin?: number) =>
     method: "POST",
     body: JSON.stringify(bufferMin != null ? { buffer_min: bufferMin } : {}),
   });
+export const deletePlan = (id: number) =>
+  request<void>(`/plans/${id}`, { method: "DELETE" });

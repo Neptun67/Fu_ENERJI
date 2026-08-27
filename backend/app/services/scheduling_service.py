@@ -68,3 +68,17 @@ class SchedulingService:
         if plan_row is None:
             raise NotFoundError(f"Plan not found (id={plan_id})")
         return plan_row
+
+    def delete_plan(self, plan_id: int) -> None:
+        """Discard a stored plan.
+
+        A plan is a leaf aggregate: its assignments and unassigned entries go with
+        it by cascade, and the ships and berths it referenced are untouched. This
+        is the one deletion in the system that destroys no shared history, which is
+        why it needs no RESTRICT guard.
+        """
+        plan_row = self.plans.get(plan_id)
+        if plan_row is None:
+            raise NotFoundError(f"Plan not found (id={plan_id})")
+        self.plans.delete(plan_row)
+        self.db.commit()

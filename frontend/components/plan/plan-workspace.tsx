@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
-import { generatePlan } from "@/lib/api";
+import { deletePlan, generatePlan } from "@/lib/api";
 import { formatDateTime } from "@/lib/datetime";
 import type { Berth, Plan, Ship } from "@/lib/types";
 import { GanttChart } from "./gantt-chart";
@@ -62,6 +62,7 @@ export function PlanWorkspace({
   );
   const [buffer, setBuffer] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const shipsById = useMemo(() => new Map(ships.map((s) => [s.id, s])), [ships]);
@@ -75,9 +76,27 @@ export function PlanWorkspace({
       const created = await generatePlan(buffer ? Number(buffer) : undefined);
       setPlans((prev) => [created, ...prev]);
       setSelectedId(created.id);
+      setConfirmingDelete(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not generate plan");
     } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removePlan() {
+    if (selectedId == null) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await deletePlan(selectedId);
+      const rest = plans.filter((p) => p.id !== selectedId);
+      setPlans(rest);
+      setSelectedId(rest[0]?.id ?? null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not delete plan");
+    } finally {
+      setConfirmingDelete(false);
       setBusy(false);
     }
   }
@@ -140,7 +159,10 @@ export function PlanWorkspace({
             <select
               id="plan-history"
               value={selectedId ?? ""}
-              onChange={(e) => setSelectedId(Number(e.target.value))}
+              onChange={(e) => {
+                setSelectedId(Number(e.target.value));
+                setConfirmingDelete(false);
+              }}
               className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm outline-none focus:border-sea-600 focus:ring-2 focus:ring-sea-100"
             >
               {plans.map((p) => (
@@ -152,6 +174,33 @@ export function PlanWorkspace({
             <span className="text-xs text-slate-500">
               {plans.length} {plans.length === 1 ? "run" : "runs"} saved
             </span>
+            {selected &&
+              (confirmingDelete ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-600">
+                    Discard plan #{selected.id}?
+                  </span>
+                  <Button size="sm" variant="danger" onClick={removePlan} disabled={busy}>
+                    Discard
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setConfirmingDelete(false)}
+                  >
+                    Keep
+                  </Button>
+                </span>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setConfirmingDelete(true)}
+                  disabled={busy}
+                >
+                  Discard
+                </Button>
+              ))}
           </div>
 
           {selected && (

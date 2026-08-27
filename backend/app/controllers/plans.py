@@ -31,3 +31,9 @@ def list_plans(service: SchedulingService = Depends(get_service)):
 @router.get("/{plan_id}", response_model=PlanRead)
 def get_plan(plan_id: int, service: SchedulingService = Depends(get_service)):
     return service.get_plan(plan_id)
+
+
+@router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_plan(plan_id: int, service: SchedulingService = Depends(get_service)):
+    """Discard a stored plan and everything recorded under it."""
+    service.delete_plan(plan_id)
