@@ -27,4 +27,9 @@ class Ship(Base, TimestampMixin):
     draft_m: Mapped[float] = mapped_column(Float, nullable=False)
     handling_time_min: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    assignments: Mapped[list["Assignment"]] = relationship(back_populates="ship")
+    assignments: Mapped[list["Assignment"]] = relationship(
+        back_populates="ship",
+        # The database sets the reference to NULL on delete; let it, rather
+        # than loading every assignment just to null it row by row.
+        passive_deletes=True,
+    )

@@ -23,4 +23,9 @@ class Berth(Base, TimestampMixin):
     length_m: Mapped[float] = mapped_column(Float, nullable=False)
     depth_m: Mapped[float] = mapped_column(Float, nullable=False)
 
-    assignments: Mapped[list["Assignment"]] = relationship(back_populates="berth")
+    assignments: Mapped[list["Assignment"]] = relationship(
+        back_populates="berth",
+        # The database sets the reference to NULL on delete; let it, rather
+        # than loading every assignment just to null it row by row.
+        passive_deletes=True,
+    )
